@@ -1,0 +1,16 @@
+.main {
+  display: flex;
+  flex-direction: row;
+  min-height: 100vh;
+  padding: 32px;
+  gap: 32px;
+}
+
+.detailsContainer {
+  min-width: 200px;
+}
+
+.mapContainer {
+  width: 800px;
+  height: 800px;
+}
