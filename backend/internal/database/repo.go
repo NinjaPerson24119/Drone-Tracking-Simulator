@@ -69,7 +69,7 @@ func (s *RepoImpl) GetLatestGeolocations(ctx context.Context, page int, pageSize
 			SELECT device_id, MAX(event_time) AS max_event_time
 			FROM device.geolocation
 			GROUP BY device_id
-		) m ON m.device_id = d.device_id
+		) m ON m.max_event_time = d.event_time
 		ORDER BY device_id DESC
 		OFFSET @offset
 		LIMIT @limit;
