@@ -2,24 +2,16 @@
 
 import { useRef, useState, useEffect } from 'react';
 import styles from './page.module.css'
-import { GetServerSideProps } from 'next';
 import mapboxgl from 'mapbox-gl'; // eslint-disable-line import/no-webpack-loader-syntax
 
-interface HomeProps {
-  latitude: number;
-  longitude: number;
-  zoom: number;
-  mapboxAPIKey: string;
-}
-
-export default function Home(props: HomeProps) {
+export default function Home() {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const map = useRef<mapboxgl.Map | null>(null);
 
   // Edmonton, Legislature
-  const [longitude, setLongitude] = useState(props.latitude);
-  const [latitude, setLatitude] = useState(props.longitude);
-  const [zoom, setZoom] = useState(props.zoom);
+  const [longitude, setLongitude] = useState(-113.5068);
+  const [latitude, setLatitude] = useState(53.5357);
+  const [zoom, setZoom] = useState(16.2);
 
   useEffect(() => {
     if(map.current) {
@@ -34,7 +26,7 @@ export default function Home(props: HomeProps) {
       center: [longitude, latitude],
       style: 'mapbox://styles/mapbox/streets-v12',
       zoom: zoom,
-      accessToken: props.mapboxAPIKey,
+      accessToken: process.env.NEXT_PUBLIC_MAPBOX_API_KEY || '',
     });
     map.current = m;
 
@@ -60,20 +52,4 @@ export default function Home(props: HomeProps) {
       <div ref={mapContainer} className={styles.mapContainer}></div>
     </main>
   )
-}
-
-export const getServerSideProps: GetServerSideProps<HomeProps> = async () => {
-  // Edmonton, Legislature
-  const initialLongitude = -113.5068;
-  const initialLatitude = 53.5357;
-  const initialZoom = 16.2;
-
-  return {
-    props: {
-      latitude: initialLatitude,
-      longitude: initialLongitude,
-      zoom: initialZoom,
-      mapboxAPIKey: process.env.MAPBOX_API_KEY || '',
-    },
-  };
 }
