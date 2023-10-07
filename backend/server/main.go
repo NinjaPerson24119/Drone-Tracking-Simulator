@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func setupRouter() *gin.Engine {
+func setupBaseRouter() *gin.Engine {
 	router := gin.Default()
 
 	router.GET("/ping", func(c *gin.Context) {
@@ -31,7 +31,8 @@ func main() {
 	}
 	fmt.Println("Connected to postgres")
 
-	router := setupRouter()
+	router := setupBaseRouter()
+	// TODO: this should take a service instead of a repo, but right now the service layer would be just a relay
 	api.RouterWithGeolocationAPI(router, repo)
 	router.Run(":8080")
 

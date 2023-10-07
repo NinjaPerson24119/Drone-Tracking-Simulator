@@ -53,7 +53,7 @@ func RouterWithGeolocationAPI(router *gin.Engine, repo database.Repo) {
 		c.JSON(http.StatusCreated, resp)
 	})
 
-	router.GET("/devices", func(c *gin.Context) {
+	router.POST("/devices", func(c *gin.Context) {
 		var request GetDevicesRequest
 		if err := c.ShouldBindQuery(&request); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
