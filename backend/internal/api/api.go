@@ -14,6 +14,7 @@ type AddDeviceResponse struct {
 type GetLatestGeolocationsRequest struct {
 	Page     int `json:"page"`
 	PageSize int `json:"page_size"`
+	// maybe add filters later by (lat,lng) and radius
 }
 
 type GetLatestGeolocationsResponse struct {
@@ -69,7 +70,7 @@ func RouterWithGeolocationAPI(router *gin.Engine, repo database.Repo) {
 		c.Status(http.StatusCreated)
 	})
 
-	router.GET("/geolocations", func(c *gin.Context) {
+	router.POST("/geolocations", func(c *gin.Context) {
 		var request GetLatestGeolocationsRequest
 		if err := c.ShouldBindJSON(&request); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
