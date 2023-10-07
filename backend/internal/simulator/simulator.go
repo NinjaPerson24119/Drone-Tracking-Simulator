@@ -29,9 +29,13 @@ type SimulatorImpl struct {
 	frequency       int
 	sleepTime       time.Duration
 	movementPerSec  float64
+
+	maxRetries int
+	retryTime  time.Duration
 }
 
 func New(repo database.Repo, noDevices int, centerLatitude float64, centerLongitude float64, radius float64, frequency int, movementPerSec float64) *SimulatorImpl {
+	sleepTime := time.Duration(1000/frequency) * time.Millisecond
 	return &SimulatorImpl{
 		repo:            repo,
 		noDevices:       noDevices,
@@ -39,8 +43,10 @@ func New(repo database.Repo, noDevices int, centerLatitude float64, centerLongit
 		centerLongitude: centerLongitude,
 		radius:          radius,
 		frequency:       frequency,
-		sleepTime:       time.Duration(1000/frequency) * time.Millisecond,
+		sleepTime:       sleepTime,
 		movementPerSec:  movementPerSec,
+		maxRetries:      5,
+		retryTime:       sleepTime / 5,
 	}
 }
 
@@ -56,12 +62,22 @@ func (s *SimulatorImpl) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		default:
-			err := s.stepDevices(ctx)
-			if err != nil {
-				fmt.Printf("Simulator died. Error stepping devices: %v\n", err)
-				return err
+			retries := 0
+			for {
+				err := s.stepDevices(ctx)
+				if err == nil {
+					break
+				}
+				retries++
+				if retries > s.maxRetries {
+					fmt.Printf("Simulator died after %d retries. Error stepping devices: %v\n", retries, err)
+					return err
+				}
+				time.Sleep(s.retryTime)
 			}
-			// just assume this will run fast enough to not need to compute deltas
+			// this isn't an exact science. as long as the devices update continuously, we're good
+			// - don't want to compute deltas
+			// - don't want to factor retry times into the sleep time
 			time.Sleep(s.sleepTime)
 		}
 	}

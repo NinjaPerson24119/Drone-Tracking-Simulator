@@ -30,6 +30,7 @@ func main() {
 	if err != nil {
 		os.Exit(postgresConnectionFailed)
 	}
+	defer repo.Close()
 	fmt.Println("Connected to postgres")
 
 	// Edmonton legislature

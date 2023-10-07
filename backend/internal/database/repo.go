@@ -30,6 +30,10 @@ func New(ctx context.Context, connectionURL string) (*RepoImpl, error) {
 	}, nil
 }
 
+func (s *RepoImpl) Close() {
+	s.pool.Close()
+}
+
 func (s *RepoImpl) InsertDevice(ctx context.Context, device *Device) (string, error) {
 	var id string
 	query := `

@@ -7,6 +7,7 @@ import (
 )
 
 type Repo interface {
+	Close()
 	InsertDevice(ctx context.Context, device *Device) (string, error)
 	ListDevices(ctx context.Context, paging filters.PageOptions) ([]*Device, error)
 	InsertGeolocation(ctx context.Context, geolocation *DeviceGeolocation) error
