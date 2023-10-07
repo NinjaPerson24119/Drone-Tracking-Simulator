@@ -12,7 +12,7 @@ type AddDeviceResponse struct {
 	DeviceID string `json:"device_id"`
 }
 
-type GetDevicesRequest struct {
+type ListDevicesRequest struct {
 	Paging filters.PageOptions `json:"paging"`
 }
 
@@ -54,8 +54,8 @@ func RouterWithGeolocationAPI(router *gin.Engine, repo database.Repo) {
 	})
 
 	router.POST("/devices", func(c *gin.Context) {
-		var request GetDevicesRequest
-		if err := c.ShouldBindQuery(&request); err != nil {
+		var request ListDevicesRequest
+		if err := c.ShouldBindJSON(&request); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
@@ -111,7 +111,6 @@ func RouterWithGeolocationAPI(router *gin.Engine, repo database.Repo) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-
 		if request.Paging.Page < 1 || request.Paging.PageSize < 1 || request.Paging.PageSize > 1000 {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid page or page_size"})
 			return
