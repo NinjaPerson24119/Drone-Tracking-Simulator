@@ -78,7 +78,7 @@ func RouterWithGeolocationAPI(router *gin.Engine, repo database.Repo) {
 		}
 
 		if request.Page < 1 || request.PageSize > 1000 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid page or pageSize"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid page or page_size"})
 			return
 		}
 
