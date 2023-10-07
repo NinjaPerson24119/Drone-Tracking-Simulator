@@ -64,7 +64,7 @@ func (s *RepoImpl) GetLatestGeolocations(ctx context.Context, page int, pageSize
 		ORDER BY device_id DESC
 		OFFSET $1
 		LIMIT $2;
-	`)
+	`, (page-1)*pageSize, pageSize)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get latest geolocations: %v", err)
 	}

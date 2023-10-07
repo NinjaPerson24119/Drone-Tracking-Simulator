@@ -28,9 +28,8 @@ func main() {
 	if err != nil {
 		os.Exit(postgresConnectionFailed)
 	}
-	fmt.Println("Successfully connected to postgres")
+	fmt.Println("Connected to postgres")
 
-	fmt.Println("Serving...")
 	router := setupRouter()
 	router.Run(":8080")
 
