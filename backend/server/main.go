@@ -8,6 +8,7 @@ import (
 
 	"github.com/NinjaPerson24119/MapProject/backend/internal/api"
 	"github.com/NinjaPerson24119/MapProject/backend/internal/database"
+	"github.com/NinjaPerson24119/MapProject/backend/internal/simulator"
 	"github.com/gin-gonic/gin"
 )
 
@@ -30,6 +31,14 @@ func main() {
 		os.Exit(postgresConnectionFailed)
 	}
 	fmt.Println("Connected to postgres")
+
+	// Edmonton legislature
+	latitude := 53.5357
+	longitude := -113.5068
+	simulator := simulator.New(repo, 100, latitude, longitude, 0.1, 60, 0.0001)
+	ctxWithCancel, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go simulator.Run(ctxWithCancel)
 
 	router := setupBaseRouter()
 	// TODO: this should take a service instead of a repo, but right now the service layer would be just a relay
