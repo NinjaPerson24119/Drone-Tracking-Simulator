@@ -1,18 +1,11 @@
 package api
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/NinjaPerson24119/MapProject/backend/internal/database"
 	"github.com/gin-gonic/gin"
 )
-
-type GeolocationAPI interface {
-	GetLatestGeolocations(ctx context.Context, page int, pageSize int) ([]*database.Device, error)
-	AddDevice(ctx context.Context, device *database.Device) (string, error)
-	AddGeolocation(ctx context.Context, geolocation *database.DeviceGeolocation) error
-}
 
 type AddDeviceResponse struct {
 	DeviceID string `json:"device_id"`
@@ -24,7 +17,7 @@ type GetLatestGeolocationsRequest struct {
 }
 
 type GetLatestGeolocationsResponse struct {
-	Geolocations []*database.Device `json:"geolocations"`
+	Geolocations []*database.DeviceGeolocation `json:"geolocations"`
 }
 
 func RouterWithGeolocationAPI(router *gin.Engine, repo database.Repo) {
@@ -32,6 +25,10 @@ func RouterWithGeolocationAPI(router *gin.Engine, repo database.Repo) {
 		var request database.Device
 		if err := c.ShouldBindJSON(&request); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if request.Name == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "missing name"})
 			return
 		}
 
@@ -48,6 +45,26 @@ func RouterWithGeolocationAPI(router *gin.Engine, repo database.Repo) {
 	})
 
 	router.POST("/geolocation", func(c *gin.Context) {
+		var request database.DeviceGeolocation
+		if err := c.ShouldBindJSON(&request); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if request.DeviceID == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "missing device_id"})
+			return
+		}
+		if request.Latitude < -90 || request.Latitude > 90 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid latitude"})
+			return
+		}
+		if request.Longitude < -180 || request.Longitude > 180 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid longitude"})
+			return
+		}
+		if request.EventTime.IsZero() {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "missing event_time"})
+		}
 
 		c.Status(http.StatusCreated)
 	})
@@ -59,50 +76,20 @@ func RouterWithGeolocationAPI(router *gin.Engine, repo database.Repo) {
 			return
 		}
 
-		if request.Page < 1 || request.Page < 1 || request.Page > 1000 {
+		if request.Page < 1 || request.PageSize > 1000 {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid page or pageSize"})
+			return
 		}
 
-		geolocations, err := s.repo.GetLatestGeolocations(ctx, page, pageSize)
+		geolocations, err := repo.GetLatestGeolocations(c.Request.Context(), request.Page, request.PageSize)
 		if err != nil {
-			return nil, err
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"message": "pong",
-		})
+		resp := GetLatestGeolocationsResponse{
+			Geolocations: geolocations,
+		}
+		c.JSON(http.StatusOK, resp)
 	})
-}
-
-type GeolocationAPIImpl struct {
-	repo database.Repo
-}
-
-func New(repo database.Repo) *GeolocationAPIImpl {
-	return &GeolocationAPIImpl{
-		repo: repo,
-	}
-}
-
-func (s *GeolocationAPIImpl) GetLatestGeolocations(ctx context.Context, page int, pageSize int) ([]*database.Device, error) {
-
-	return geolocations, nil
-}
-
-func (s *GeolocationAPIImpl) AddDevice(ctx context.Context, device *database.Device) (string, error) {
-	id, err := s.repo.InsertDevice(ctx, device)
-	if err != nil {
-		return "", err
-	}
-
-	return id, nil
-}
-
-func (s *GeolocationAPIImpl) AddGeolocation(ctx context.Context, geolocation *database.DeviceGeolocation) error {
-	err := s.repo.InsertGeolocation(ctx, geolocation)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
