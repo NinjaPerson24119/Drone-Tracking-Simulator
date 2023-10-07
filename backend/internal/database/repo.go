@@ -54,13 +54,13 @@ func (s *RepoImpl) GetLatestGeolocations(ctx context.Context, page int, pageSize
 		return nil, fmt.Errorf("invalid page or pageSize")
 	}
 	rows, err := s.pool.Query(ctx, `
-		SELECT device_id, event_time, latitude, longitude
-		FROM device.geolocation
+		SELECT d.device_id, d.event_time, d.latitude, d.longitude
+		FROM device.geolocation AS d
 		INNER JOIN (
 			SELECT device_id, MAX(event_time) AS max_event_time
 			FROM device.geolocation
 			GROUP BY device_id
-		) m ON m.device_id = device.geolocation
+		) m ON m.device_id = d.device_id
 		ORDER BY device_id DESC
 		OFFSET $1
 		LIMIT $2;
