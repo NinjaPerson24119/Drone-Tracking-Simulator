@@ -63,7 +63,7 @@ func (s *RepoImpl) GetLatestGeolocations(ctx context.Context, page int, pageSize
 		return nil, fmt.Errorf("invalid page or pageSize")
 	}
 	query := `
-		SELECT d.device_id, d.event_time, d.latitude, d.longitude
+		SELECT d.device_id, d.event_time, d.latitude, d.longitude, d.created, d.updated, d.deleted
 		FROM device.geolocation AS d
 		INNER JOIN (
 			SELECT device_id, MAX(event_time) AS max_event_time
@@ -92,6 +92,9 @@ func (s *RepoImpl) GetLatestGeolocations(ctx context.Context, page int, pageSize
 			&geolocation.EventTime,
 			&geolocation.Latitude,
 			&geolocation.Longitude,
+			&geolocation.Created,
+			&geolocation.Updated,
+			&geolocation.Deleted,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan a geolocation: %v", err)
