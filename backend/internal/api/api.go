@@ -66,6 +66,11 @@ func RouterWithGeolocationAPI(router *gin.Engine, repo database.Repo) {
 		if request.EventTime.IsZero() {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "missing event_time"})
 		}
+		err := repo.InsertGeolocation(c.Request.Context(), &request)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 
 		c.Status(http.StatusCreated)
 	})
