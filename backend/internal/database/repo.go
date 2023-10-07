@@ -69,11 +69,16 @@ func (s *RepoImpl) ListDevices(ctx context.Context, paging filters.PageOptions) 
 	}
 	defer rows.Close()
 
-	devices, err := pgx.CollectRows(rows, pgx.RowToStructByName[*Device])
+	devices, err := pgx.CollectRows(rows, pgx.RowToStructByName[Device])
 	if err != nil {
 		return nil, fmt.Errorf("failed to collect devices: %v", err)
 	}
-	return devices, nil
+
+	ptrs := make([]*Device, len(devices))
+	for i := range devices {
+		ptrs[i] = &devices[i]
+	}
+	return ptrs, nil
 }
 
 func (s *RepoImpl) InsertGeolocation(ctx context.Context, geolocation *DeviceGeolocation) error {
@@ -122,9 +127,14 @@ func (s *RepoImpl) GetLatestGeolocations(ctx context.Context, paging filters.Pag
 	}
 	defer rows.Close()
 
-	geolocations, err := pgx.CollectRows(rows, pgx.RowToStructByName[*DeviceGeolocation])
+	geolocations, err := pgx.CollectRows(rows, pgx.RowToStructByName[DeviceGeolocation])
 	if err != nil {
 		return nil, fmt.Errorf("failed to collect latest geolocations: %v", err)
 	}
-	return geolocations, nil
+
+	ptrs := make([]*DeviceGeolocation, len(geolocations))
+	for i := range geolocations {
+		ptrs[i] = &geolocations[i]
+	}
+	return ptrs, nil
 }
