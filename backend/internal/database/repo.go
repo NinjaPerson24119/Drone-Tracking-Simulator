@@ -49,7 +49,7 @@ func (s *RepoImpl) InsertDevice(ctx context.Context, device *Device) (string, er
 
 func (s *RepoImpl) ListDevices(ctx context.Context, paging filters.PageOptions) ([]*Device, error) {
 	if paging.Page < 1 || paging.PageSize < 1 || paging.PageSize > 1000 {
-		return nil, fmt.Errorf("invalid page or pageSize")
+		return nil, fmt.Errorf("repo: invalid page or pageSize")
 	}
 	query := `
 		SELECT device_id, device_name, created, updated, deleted
@@ -101,7 +101,7 @@ func (s *RepoImpl) InsertGeolocation(ctx context.Context, geolocation *DeviceGeo
 
 func (s *RepoImpl) GetLatestGeolocations(ctx context.Context, paging filters.PageOptions) ([]*DeviceGeolocation, error) {
 	if paging.Page < 1 || paging.PageSize < 1 || paging.PageSize > 1000 {
-		return nil, fmt.Errorf("invalid page or pageSize")
+		return nil, fmt.Errorf("repo: invalid page or pageSize")
 	}
 	query := `
 		SELECT d.device_id, d.event_time, d.latitude, d.longitude, d.created, d.updated, d.deleted
