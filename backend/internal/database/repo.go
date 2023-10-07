@@ -68,8 +68,10 @@ func (s *RepoImpl) GetLatestGeolocations(ctx context.Context, page int, pageSize
 		INNER JOIN (
 			SELECT device_id, MAX(event_time) AS max_event_time
 			FROM device.geolocation
+			WHERE deleted IS NULL
 			GROUP BY device_id
 		) m ON m.max_event_time = d.event_time AND m.device_id = d.device_id
+		WHERE d.deleted IS NULL
 		ORDER BY device_id DESC
 		OFFSET @offset
 		LIMIT @limit;
