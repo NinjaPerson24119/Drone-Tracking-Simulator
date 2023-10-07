@@ -88,6 +88,9 @@ func RouterWithGeolocationAPI(router *gin.Engine, repo database.Repo) {
 			return
 		}
 
+		if len(geolocations) == 0 {
+			geolocations = []*database.DeviceGeolocation{}
+		}
 		resp := GetLatestGeolocationsResponse{
 			Geolocations: geolocations,
 		}
