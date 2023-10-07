@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/NinjaPerson24119/MapProject/backend/internal/database"
+	"github.com/NinjaPerson24119/MapProject/backend/internal/filters"
 	"github.com/gin-gonic/gin"
 )
 
@@ -11,10 +12,17 @@ type AddDeviceResponse struct {
 	DeviceID string `json:"device_id"`
 }
 
+type GetDevicesRequest struct {
+	Paging filters.PageOptions `json:"page_options"`
+}
+
+type GetDevicesResponse struct {
+	Devices []*database.Device `json:"devices"`
+}
+
 type GetLatestGeolocationsRequest struct {
-	Page     int `json:"page"`
-	PageSize int `json:"page_size"`
-	// maybe add filters later by (lat,lng) and radius
+	Paging filters.PageOptions `json:"page_options"`
+	// TODO: maybe add filters later by (lat,lng) and radius
 }
 
 type GetLatestGeolocationsResponse struct {
@@ -43,6 +51,28 @@ func RouterWithGeolocationAPI(router *gin.Engine, repo database.Repo) {
 			DeviceID: id,
 		}
 		c.JSON(http.StatusCreated, resp)
+	})
+
+	router.GET("/devices", func(c *gin.Context) {
+		var request GetDevicesRequest
+		if err := c.ShouldBindQuery(&request); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if request.Paging.Page < 1 || request.Paging.PageSize < 1 || request.Paging.PageSize > 1000 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid page or page_size"})
+			return
+		}
+
+		devices, err := repo.ListDevices(c.Request.Context(), request.Paging)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		resp := GetDevicesResponse{
+			Devices: devices,
+		}
+		c.JSON(http.StatusOK, resp)
 	})
 
 	router.POST("/geolocation", func(c *gin.Context) {
@@ -82,12 +112,12 @@ func RouterWithGeolocationAPI(router *gin.Engine, repo database.Repo) {
 			return
 		}
 
-		if request.Page < 1 || request.PageSize > 1000 {
+		if request.Paging.Page < 1 || request.Paging.PageSize < 1 || request.Paging.PageSize > 1000 {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid page or page_size"})
 			return
 		}
 
-		geolocations, err := repo.GetLatestGeolocations(c.Request.Context(), request.Page, request.PageSize)
+		geolocations, err := repo.GetLatestGeolocations(c.Request.Context(), request.Paging)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/NinjaPerson24119/MapProject/backend/internal/filters"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -40,6 +41,35 @@ func (s *RepoImpl) InsertDevice(ctx context.Context, device *Device) (string, er
 	return id, nil
 }
 
+func (s *RepoImpl) ListDevices(ctx context.Context, paging filters.PageOptions) ([]*Device, error) {
+	if paging.Page < 1 || paging.PageSize < 1 || paging.PageSize > 1000 {
+		return nil, fmt.Errorf("invalid page or pageSize")
+	}
+	query := `
+		SELECT device_id, device_name, created, updated, deleted
+		FROM device.information
+		WHERE deleted IS NULL
+		ORDER BY device_id DESC
+		OFFSET @offset
+		LIMIT @limit;
+	`
+	args := pgx.NamedArgs{
+		"offset": (paging.Page - 1) * paging.PageSize,
+		"limit":  paging.PageSize,
+	}
+	rows, err := s.pool.Query(ctx, query, args)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list devices: %v", err)
+	}
+	defer rows.Close()
+
+	devices, err := pgx.CollectRows(rows, pgx.RowToStructByName[*Device])
+	if err != nil {
+		return nil, fmt.Errorf("failed to collect devices: %v", err)
+	}
+	return devices, nil
+}
+
 func (s *RepoImpl) InsertGeolocation(ctx context.Context, geolocation *DeviceGeolocation) error {
 	query := `
 		INSERT INTO device.geolocation (device_id, event_time, latitude ,longitude)
@@ -58,8 +88,8 @@ func (s *RepoImpl) InsertGeolocation(ctx context.Context, geolocation *DeviceGeo
 	return nil
 }
 
-func (s *RepoImpl) GetLatestGeolocations(ctx context.Context, page int, pageSize int) ([]*DeviceGeolocation, error) {
-	if page < 1 || pageSize < 1 || pageSize > 1000 {
+func (s *RepoImpl) GetLatestGeolocations(ctx context.Context, paging filters.PageOptions) ([]*DeviceGeolocation, error) {
+	if paging.Page < 1 || paging.PageSize < 1 || paging.PageSize > 1000 {
 		return nil, fmt.Errorf("invalid page or pageSize")
 	}
 	query := `
@@ -77,8 +107,8 @@ func (s *RepoImpl) GetLatestGeolocations(ctx context.Context, page int, pageSize
 		LIMIT @limit;
 	`
 	args := pgx.NamedArgs{
-		"offset": (page - 1) * pageSize,
-		"limit":  pageSize,
+		"offset": (paging.Page - 1) * paging.PageSize,
+		"limit":  paging.PageSize,
 	}
 	rows, err := s.pool.Query(ctx, query, args)
 	if err != nil {
@@ -86,23 +116,9 @@ func (s *RepoImpl) GetLatestGeolocations(ctx context.Context, page int, pageSize
 	}
 	defer rows.Close()
 
-	var geolocations []*DeviceGeolocation
-	for rows.Next() {
-		var geolocation DeviceGeolocation
-		err := rows.Scan(
-			&geolocation.DeviceID,
-			&geolocation.EventTime,
-			&geolocation.Latitude,
-			&geolocation.Longitude,
-			&geolocation.Created,
-			&geolocation.Updated,
-			&geolocation.Deleted,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to scan a geolocation: %v", err)
-		}
-		geolocations = append(geolocations, &geolocation)
+	geolocations, err := pgx.CollectRows(rows, pgx.RowToStructByName[*DeviceGeolocation])
+	if err != nil {
+		return nil, fmt.Errorf("failed to collect latest geolocations: %v", err)
 	}
-
 	return geolocations, nil
 }
