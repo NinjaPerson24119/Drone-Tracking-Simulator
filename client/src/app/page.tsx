@@ -9,8 +9,8 @@ export default function Home() {
   const map = useRef<mapboxgl.Map | null>(null);
 
   // Edmonton, Legislature
-  const [longitude, setLongitude] = useState(-113.5068);
   const [latitude, setLatitude] = useState(53.5357);
+  const [longitude, setLongitude] = useState(-113.5068);
   const [zoom, setZoom] = useState(16.2);
 
   useEffect(() => {
@@ -34,8 +34,8 @@ export default function Home() {
       if (!map.current) {
         return;
       }
-      setLongitude(parseFloat(map.current.getCenter().lng.toFixed(4)));
       setLatitude(parseFloat((map.current.getCenter().lat.toFixed(4))));
+      setLongitude(parseFloat(map.current.getCenter().lng.toFixed(4)));
       setZoom(parseFloat(map.current.getZoom().toFixed(2)));
     });
   })
@@ -45,8 +45,8 @@ export default function Home() {
       <div className={styles.detailsContainer}>
         <h1>Drone Tracker</h1>
         <br/>
-        <p>Longitude: {longitude}</p>
         <p>Latitude: {latitude}</p>
+        <p>Longitude: {longitude}</p>
         <p>Zoom: {zoom}</p>
       </div>
       <div ref={mapContainer} className={styles.mapContainer}></div>

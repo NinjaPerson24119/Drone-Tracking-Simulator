@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS device.information (
 
 CREATE TABLE IF NOT EXISTS device.geolocation (
     device_id uuid REFERENCES device.information NOT NULL,
-    event_time TIMESTAMPTZ UNIQUE NOT NULL,
+    event_time TIMESTAMPTZ NOT NULL,
     latitude DECIMAL NOT NULL CHECK(latitude >= -90 AND latitude <= 90),
     longitude DECIMAL NOT NULL CHECK(longitude >= -180 AND longitude <= 180),
     created TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
