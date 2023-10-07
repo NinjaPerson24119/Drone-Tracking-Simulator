@@ -10,11 +10,17 @@ import (
 )
 
 type RepoImpl struct {
+	// this resource is thread safe
 	pool *pgxpool.Pool
 }
 
 func New(ctx context.Context, connectionURL string) (*RepoImpl, error) {
-	pool, err := pgxpool.New(ctx, connectionURL)
+	config, err := pgxpool.ParseConfig(connectionURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse postgres connection url: %v", err)
+	}
+	config.MinConns = 2
+	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to postgres: %v", err)
 	}

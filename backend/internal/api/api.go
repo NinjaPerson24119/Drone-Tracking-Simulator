@@ -13,7 +13,7 @@ type AddDeviceResponse struct {
 }
 
 type GetDevicesRequest struct {
-	Paging filters.PageOptions `json:"page_options"`
+	Paging filters.PageOptions `json:"paging"`
 }
 
 type GetDevicesResponse struct {
@@ -21,7 +21,7 @@ type GetDevicesResponse struct {
 }
 
 type GetLatestGeolocationsRequest struct {
-	Paging filters.PageOptions `json:"page_options"`
+	Paging filters.PageOptions `json:"paging"`
 	// TODO: maybe add filters later by (lat,lng) and radius
 }
 
