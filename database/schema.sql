@@ -11,12 +11,12 @@ CREATE TABLE IF NOT EXISTS tracker.device (
 );
 
 CREATE TABLE IF NOT EXISTS tracker.geolocation (
-    tracker_id TEXT REFERENCES tracker.device NOT NULL,
+    tracker_id uuid REFERENCES tracker.device NOT NULL,
     event_time TIMESTAMPTZ UNIQUE NOT NULL,
     longitude DECIMAL NOT NULL CHECK(longitude >= -180 AND longitude <= 180),
-    latitude DECIMAL PRECISION NOT NULL CHECK(latitude >= -90 AND latitude <= 90),
+    latitude DECIMAL NOT NULL CHECK(latitude >= -90 AND latitude <= 90),
     created TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    deleted TIMESTAMPTZ
+    deleted TIMESTAMPTZ,
     PRIMARY KEY (tracker_id, event_time)
 );
