@@ -34,12 +34,19 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 			}
 			err = ws.WriteJSON(json)
 			if err != nil {
-				return fmt.Errorf("Geolocations websocket error: %v\n", err)
+				if closeErr, ok := err.(*websocket.CloseError); ok {
+					closeCode := closeErr.Code
+					closeReason := closeErr.Text
+					fmt.Printf("websocket closed with code %d and reason %s\n", closeCode, closeReason)
+					return nil
+				} else {
+					return fmt.Errorf("error writing to websocket: %v\n", err)
+				}
 			}
 			return nil
 		})
 		if err != nil {
-			fmt.Printf("Geolocations websocket error: %v\n", err)
+			fmt.Printf("error listening to geolocation inserted: %v\n", err)
 			return
 		}
 	}
