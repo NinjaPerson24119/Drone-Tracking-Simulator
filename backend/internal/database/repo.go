@@ -154,15 +154,16 @@ func (s *RepoImpl) GetLatestGeolocation(ctx context.Context, deviceID string) (*
 		INNER JOIN (
 			SELECT device_id, MAX(event_time) AS max_event_time
 			FROM device.geolocation
-			WHERE device_id = @deviceID AND deleted IS NULL
+			WHERE device_id = @deviceID1 AND deleted IS NULL
 			GROUP BY device_id
 		) m ON m.max_event_time = d.event_time AND m.device_id = d.device_id
-		WHERE d.device_id = @deviceID AND d.deleted IS NULL
+		WHERE d.device_id = @deviceID2 AND d.deleted IS NULL
 		ORDER BY device_id DESC
 		LIMIT 1;
 	`
 	args := pgx.NamedArgs{
-		"deviceID": deviceID,
+		"deviceID1": deviceID,
+		"deviceID2": deviceID,
 	}
 	rows, err := s.pool.Query(ctx, query, args)
 	if err != nil {
