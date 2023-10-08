@@ -148,7 +148,6 @@ func (s *RepoImpl) GetLatestGeolocations(ctx context.Context, paging filters.Pag
 }
 
 func (s *RepoImpl) GetLatestGeolocation(ctx context.Context, deviceID string) (*DeviceGeolocation, error) {
-	fmt.Printf("deviceID: %v\n", deviceID)
 	query := `
 		SELECT d.device_id, d.event_time, d.latitude, d.longitude, d.created, d.updated, d.deleted
 		FROM device.geolocation AS d
@@ -179,7 +178,7 @@ func (s *RepoImpl) GetLatestGeolocation(ctx context.Context, deviceID string) (*
 		return nil, nil
 	}
 
-	return &geolocations[1], nil
+	return &geolocations[0], nil
 }
 
 func (s *RepoImpl) ListenToGeolocationInserted(ctx context.Context, handler func(*DeviceGeolocation) error) error {

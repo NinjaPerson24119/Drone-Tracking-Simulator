@@ -107,11 +107,6 @@ func RouterWithGeolocationAPI(router *gin.Engine, repo database.Repo) {
 
 	router.POST("/geolocation/:deviceID", func(c *gin.Context) {
 		deviceID := c.Param("deviceID")
-		if deviceID == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "missing device_id"})
-			return
-		}
-
 		geolocation, err := repo.GetLatestGeolocation(c.Request.Context(), deviceID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
