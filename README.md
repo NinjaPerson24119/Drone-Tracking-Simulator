@@ -23,6 +23,7 @@ Simulates drones moving around a map and displays them in realtime.
 # References
 - https://docs.mapbox.com/help/tutorials/use-mapbox-gl-js-with-react/
 - https://github.com/timescale/timescaledb
+- https://lwebapp.com/en/post/go-websocket-simple-server
 
 # Corners cut
 - Write service layer

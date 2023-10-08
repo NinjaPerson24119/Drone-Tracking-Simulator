@@ -30,7 +30,7 @@ type GetLatestGeolocationsResponse struct {
 }
 
 func RouterWithGeolocationAPI(router *gin.Engine, repo database.Repo) {
-	router.POST("/device", func(c *gin.Context) {
+	router.POST("/device/create", func(c *gin.Context) {
 		var request database.Device
 		if err := c.ShouldBindJSON(&request); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -53,7 +53,7 @@ func RouterWithGeolocationAPI(router *gin.Engine, repo database.Repo) {
 		c.JSON(http.StatusCreated, resp)
 	})
 
-	router.POST("/devices", func(c *gin.Context) {
+	router.POST("/device/list", func(c *gin.Context) {
 		var request ListDevicesRequest
 		if err := c.ShouldBindJSON(&request); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -75,7 +75,7 @@ func RouterWithGeolocationAPI(router *gin.Engine, repo database.Repo) {
 		c.JSON(http.StatusOK, resp)
 	})
 
-	router.POST("/geolocation", func(c *gin.Context) {
+	router.POST("/geolocation/create", func(c *gin.Context) {
 		var request database.DeviceGeolocation
 		if err := c.ShouldBindJSON(&request); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -105,7 +105,26 @@ func RouterWithGeolocationAPI(router *gin.Engine, repo database.Repo) {
 		c.Status(http.StatusCreated)
 	})
 
-	router.POST("/geolocations", func(c *gin.Context) {
+	router.POST("/geolocation/:deviceID", func(c *gin.Context) {
+		deviceID := c.Param("deviceID")
+		if deviceID == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "missing device_id"})
+			return
+		}
+
+		geolocation, err := repo.GetLatestGeolocation(c.Request.Context(), deviceID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		if geolocation == nil {
+			c.Status(http.StatusNotFound)
+			return
+		}
+		c.JSON(http.StatusOK, geolocation)
+	})
+
+	router.POST("/geolocation/list", func(c *gin.Context) {
 		var request GetLatestGeolocationsRequest
 		if err := c.ShouldBindJSON(&request); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -130,4 +149,6 @@ func RouterWithGeolocationAPI(router *gin.Engine, repo database.Repo) {
 		}
 		c.JSON(http.StatusOK, resp)
 	})
+
+	router.GET("/geolocation/stream", geolocationsWebSocketGenerator(repo))
 }
