@@ -111,12 +111,11 @@ func (s *SimulatorImpl) setupDevices(ctx context.Context) error {
 	// pick random starting locations and directions
 	for _, device := range devices {
 		directionRadians := 2 * math.Pi * rand.Float64()
-		distanceAlongRadius := s.radius * rand.Float64()
 		deviceGeolocation := &database.DeviceGeolocation{
 			DeviceID:  device.DeviceID,
 			EventTime: time.Now(),
-			Latitude:  s.centerLatitude + distanceAlongRadius*math.Sin(directionRadians),
-			Longitude: s.centerLongitude + distanceAlongRadius*math.Cos(directionRadians),
+			Latitude:  s.centerLatitude + s.radius/2*(rand.Float64()-0.5)*2,
+			Longitude: s.centerLongitude + s.radius/2*(rand.Float64()-0.5)*2,
 		}
 
 		s.simulatedDevices = append(s.simulatedDevices, &SimulatedDevice{
@@ -130,19 +129,17 @@ func (s *SimulatorImpl) setupDevices(ctx context.Context) error {
 }
 
 func (s *SimulatorImpl) stepDevices(ctx context.Context) error {
-	distance := 0.1 //s.movementPerSec * (1.0 / float64(s.frequency))
+	distance := s.movementPerSec * (1.0 / float64(s.frequency))
 	for _, device := range s.simulatedDevices {
 		device.geolocation.EventTime = time.Now()
 		device.geolocation.Latitude += distance * math.Sin(device.directionRadians)
 		device.geolocation.Longitude += distance * math.Cos(device.directionRadians)
 
 		// switch direction if we're outside the circle
-		/*
-			distanceSquaredFromCenter := math.Pow(device.geolocation.Latitude-s.centerLatitude, 2) + math.Pow(device.geolocation.Longitude-s.centerLongitude, 2)
-			if distanceSquaredFromCenter > math.Pow(s.radius, 2) {
-				device.directionRadians += math.Pi
-			}
-		*/
+		distanceSquaredFromCenter := math.Pow(device.geolocation.Latitude-s.centerLatitude, 2) + math.Pow(device.geolocation.Longitude-s.centerLongitude, 2)
+		if distanceSquaredFromCenter > math.Pow(s.radius, 2) {
+			device.directionRadians += math.Pi
+		}
 
 		err := s.repo.InsertGeolocation(ctx, device.geolocation)
 		if err != nil {
