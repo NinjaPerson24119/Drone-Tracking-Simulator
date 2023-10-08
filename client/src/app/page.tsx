@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from 'react';
 import styles from './page.module.css'
 import mapboxgl from 'mapbox-gl'; // eslint-disable-line import/no-webpack-loader-syntax
+import { Feature, Geometry, GeoJsonProperties } from 'geojson';
 
 const geolocationStreamAPI = 'wss://map-project-backend.onrender.com/geolocation/stream';
 
@@ -16,9 +17,25 @@ interface Geolocation {
   longitude: number;
 }
 
+function GeolocationsToFeatureCollection(geolocations: Geolocation[]): Feature<Geometry, GeoJsonProperties>[] {
+  return geolocations.map((geolocation) => {
+    return {
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: [geolocation.longitude, geolocation.latitude],
+      },
+      properties: {
+        id: geolocation.device_id,
+      },
+    };
+  });
+}
+
 export default function Home() {
   const [geolocations, setGeolocations] = useState<Map<string, Geolocation>>(new Map<string, Geolocation>());
-  const [markers, setMarkers] = useState<Map<string, mapboxgl.Marker>>(new Map<string, mapboxgl.Marker>());
+  const [layerAdded, setLayerAdded] = useState<boolean>(false);
+  const [mapStyleLoaded, setMapStyleLoaded] = useState<boolean>(false);
   const socket = useRef<WebSocket | null>(null);
 
   const mapContainer = useRef<HTMLDivElement | null>(null);
@@ -31,13 +48,13 @@ export default function Home() {
 
   // initialize map
   useEffect(() => {
-    if(map.current) {
+    if (map.current) {
       return;
     }
     if (!mapContainer.current) {
       return;
     }
-    
+
     const m = new mapboxgl.Map({
       container: mapContainer.current,
       center: [longitude, latitude],
@@ -55,6 +72,10 @@ export default function Home() {
       setLongitude(parseFloat(map.current.getCenter().lng.toFixed(4)));
       setZoom(parseFloat(map.current.getZoom().toFixed(2)));
     });
+
+    map.current.on("style.load", () => {
+      setMapStyleLoaded(true);
+    });
   })
 
   // connect to websocket and listen to geolocation stream
@@ -62,7 +83,7 @@ export default function Home() {
     if (socket.current) {
       return;
     }
-    
+
     // TODO: handle retrying connection
     const ws = new WebSocket(geolocationStreamAPI);
     ws.addEventListener('open', () => {
@@ -82,7 +103,7 @@ export default function Home() {
           geolocations.set(geolocation.device_id, geolocation);
         }
         setGeolocations(new Map(geolocations));
-        console.log('Geolocations:', geolocations);
+        //console.log('Geolocations:', geolocations);
       } catch (error) {
         console.error('Error while reading WebSocket message:', error);
       }
@@ -95,41 +116,53 @@ export default function Home() {
     };
   })
 
-  // add/update markers
+  // add/update markers as layers on map
   useEffect(() => {
     if (!map.current) {
       return;
     }
-
-    for (const geolocation of geolocations.values()) {
-      if (markers.has(geolocation.device_id)) {
-        const marker = markers.get(geolocation.device_id);
-        if (marker) {
-          marker.setLngLat([geolocation.longitude, geolocation.latitude]);
+    if (!mapStyleLoaded) {
+      return;
+    }
+    if (!layerAdded) {
+      map.current.addSource('device-locations', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: GeolocationsToFeatureCollection(Array.from(geolocations.values())),
         }
-        continue;
-      }
-      const marker = new mapboxgl.Marker({
-        color: '#FF0000',
-        draggable: false,
-        anchor: 'center',
-        //element: ReactDOM.render(() => <div className={styles.marker}></div>),
-      }).setLngLat([geolocation.longitude, geolocation.latitude]).addTo(map.current);
-      marker.setLngLat
+      });
+      map.current.addLayer({
+        id: 'device-locations-layer',
+        type: 'circle',
+        source: 'device-locations',
+        paint: {
+          'circle-color': '#11b4da',
+          'circle-radius': 10,
+          'circle-stroke-width': 1,
+          'circle-stroke-color': '#fff'
+        }
+      });
+      setLayerAdded(true);
     }
 
-    setMarkers(new Map(markers));
+    map.current.getSource('device-locations').setData(
+      {
+        type: 'FeatureCollection',
+        features: GeolocationsToFeatureCollection(Array.from(geolocations.values())),
+      }
+    );
+    //console.log('Updated map source data.');
   }, [geolocations])
 
   return (
     <main className={styles.main}>
       <div className={styles.detailsContainer}>
         <h1>Drone Tracker</h1>
-        <br/>
+        <br />
         <p>Latitude: {latitude}</p>
         <p>Longitude: {longitude}</p>
         <p>Zoom: {zoom}</p>
-        <p>{JSON.stringify(geolocations)}</p>
       </div>
       <div ref={mapContainer} className={styles.mapContainer}></div>
     </main>
