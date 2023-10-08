@@ -35,9 +35,7 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 			err = ws.WriteJSON(json)
 			if err != nil {
 				if closeErr, ok := err.(*websocket.CloseError); ok {
-					closeCode := closeErr.Code
-					closeReason := closeErr.Text
-					fmt.Printf("websocket closed with code %d and reason %s\n", closeCode, closeReason)
+					fmt.Printf("websocket closed: %s", closeErr.Error())
 					return nil
 				} else {
 					return fmt.Errorf("error writing to websocket: %v\n", err)
