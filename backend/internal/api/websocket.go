@@ -142,6 +142,7 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 				}
 				flaggedDeviceIDs = map[string]bool{}
 				muFlaggedDeviceIDs.Unlock()
+				fmt.Printf("got %v flagged geolocations and reset flags\n", len(geolocationIDs))
 
 				// get flagged geolocations from the database
 				geolocations, err := repo.GetMultiLatestGeolocations(c.Request.Context(), geolocationIDs)
@@ -159,6 +160,7 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 					}
 				}
 				if len(geolocationsWithoutNil) == 0 {
+					fmt.Printf("getmulti only returned nil geolocations\n")
 					continue
 				}
 
