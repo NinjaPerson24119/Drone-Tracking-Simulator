@@ -99,78 +99,76 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 		// buffer geolocations
 		muFlaggedDeviceIDs := sync.Mutex{}
 		flaggedDeviceIDs := map[string]bool{}
-		/*
-			bufferSize := constants.SimulatedDevices
-			bufferPeriod := time.Second / 2
-			timeAtLastSend := time.Now()
-			checkPeriod := time.Millisecond * 10
-			go func() {
-				for {
-					fmt.Print("checking for flagged geolocations\n")
-					if wsClosed.Load() {
-						fmt.Print("websocket closed while processing flagged geolocations")
-						return
-					}
-
-					// wait until there are enough flagged geolocations or enough time has passed
-					muFlaggedDeviceIDs.Lock()
-					flaggedDeviceIDsLength := len(flaggedDeviceIDs)
-					muFlaggedDeviceIDs.Unlock()
-					if (flaggedDeviceIDsLength < bufferSize && time.Since(timeAtLastSend) < bufferPeriod) || flaggedDeviceIDsLength == 0 {
-						fmt.Printf("not enough flagged geolocations: %v < %v, and not enough time elapsed: %v < %v\n", flaggedDeviceIDsLength, bufferSize, time.Since(timeAtLastSend), bufferPeriod)
-						continue
-					}
-
-					// get flagged geolocations as a list of IDs, then clear the flag
-					geolocationIDs := []string{}
-					muFlaggedDeviceIDs.Lock()
-					for k := range flaggedDeviceIDs {
-						geolocationIDs = append(geolocationIDs, k)
-					}
-					flaggedDeviceIDs = map[string]bool{}
-					muFlaggedDeviceIDs.Unlock()
-					fmt.Printf("got %v flagged geolocations and reset flags\n", len(geolocationIDs))
-
-					// get flagged geolocations from the database
-					geolocations, err := repo.GetMultiLatestGeolocations(c.Request.Context(), geolocationIDs)
-					if err != nil {
-						fmt.Printf("error getting flagged geolocations: %v\n", err)
-						return
-					}
-					// not found geolocations will be returned from GetMulti as nil
-					geolocationsWithoutNil := []*database.DeviceGeolocation{}
-					for _, g := range geolocations {
-						if g != nil {
-							geolocationsWithoutNil = append(geolocationsWithoutNil, g)
-						} else {
-							fmt.Printf("geolocation not found after notification: %v\n", g)
-						}
-					}
-					if len(geolocationsWithoutNil) == 0 {
-						fmt.Printf("getmulti only returned nil geolocations\n")
-						continue
-					}
-
-					// send flagged geolocations to the websocket
-					muWriter.Lock()
-					ws.SetWriteDeadline(time.Now().Add(writeWait))
-					json := GeolocationsWebSocketMessage{
-						Geolocations: geolocationsWithoutNil,
-					}
-					err = ws.WriteJSON(json)
-					muWriter.Unlock()
-					if err != nil {
-						fmt.Printf("error writing json to websocket: %v\n", err)
-						return
-					}
-					timeAtLastSend = time.Now()
-					fmt.Printf("sent %v geolocations to websocket\n", len(geolocations))
-
-					// avoid hammering the locks
-					time.Sleep(checkPeriod)
+		bufferSize := constants.SimulatedDevices
+		bufferPeriod := time.Second / 2
+		timeAtLastSend := time.Now()
+		checkPeriod := time.Millisecond * 10
+		go func() {
+			for {
+				fmt.Print("checking for flagged geolocations\n")
+				if wsClosed.Load() {
+					fmt.Print("websocket closed while processing flagged geolocations")
+					return
 				}
-			}()
-		*/
+
+				// wait until there are enough flagged geolocations or enough time has passed
+				muFlaggedDeviceIDs.Lock()
+				flaggedDeviceIDsLength := len(flaggedDeviceIDs)
+				muFlaggedDeviceIDs.Unlock()
+				if (flaggedDeviceIDsLength < bufferSize && time.Since(timeAtLastSend) < bufferPeriod) || flaggedDeviceIDsLength == 0 {
+					fmt.Printf("not enough flagged geolocations: %v < %v, and not enough time elapsed: %v < %v\n", flaggedDeviceIDsLength, bufferSize, time.Since(timeAtLastSend), bufferPeriod)
+					continue
+				}
+
+				// get flagged geolocations as a list of IDs, then clear the flag
+				geolocationIDs := []string{}
+				muFlaggedDeviceIDs.Lock()
+				for k := range flaggedDeviceIDs {
+					geolocationIDs = append(geolocationIDs, k)
+				}
+				flaggedDeviceIDs = map[string]bool{}
+				muFlaggedDeviceIDs.Unlock()
+				fmt.Printf("got %v flagged geolocations and reset flags\n", len(geolocationIDs))
+
+				// get flagged geolocations from the database
+				geolocations, err := repo.GetMultiLatestGeolocations(c.Request.Context(), geolocationIDs)
+				if err != nil {
+					fmt.Printf("error getting flagged geolocations: %v\n", err)
+					return
+				}
+				// not found geolocations will be returned from GetMulti as nil
+				geolocationsWithoutNil := []*database.DeviceGeolocation{}
+				for _, g := range geolocations {
+					if g != nil {
+						geolocationsWithoutNil = append(geolocationsWithoutNil, g)
+					} else {
+						fmt.Printf("geolocation not found after notification: %v\n", g)
+					}
+				}
+				if len(geolocationsWithoutNil) == 0 {
+					fmt.Printf("getmulti only returned nil geolocations\n")
+					continue
+				}
+
+				// send flagged geolocations to the websocket
+				muWriter.Lock()
+				ws.SetWriteDeadline(time.Now().Add(writeWait))
+				json := GeolocationsWebSocketMessage{
+					Geolocations: geolocationsWithoutNil,
+				}
+				err = ws.WriteJSON(json)
+				muWriter.Unlock()
+				if err != nil {
+					fmt.Printf("error writing json to websocket: %v\n", err)
+					return
+				}
+				timeAtLastSend = time.Now()
+				fmt.Printf("sent %v geolocations to websocket\n", len(geolocations))
+
+				// avoid hammering the locks
+				time.Sleep(checkPeriod)
+			}
+		}()
 
 		// begin connection by sending all geolocations
 		fmt.Print("sending complete geolocations update to websocket\n")
