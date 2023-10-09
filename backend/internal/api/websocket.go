@@ -129,7 +129,7 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 				muFlaggedDeviceIDs.Lock()
 				flaggedDeviceIDsLength := len(flaggedDeviceIDs)
 				muFlaggedDeviceIDs.Unlock()
-				if flaggedDeviceIDsLength < bufferSize && time.Since(timeAtLastSend) < bufferPeriod {
+				if (flaggedDeviceIDsLength < bufferSize && time.Since(timeAtLastSend) < bufferPeriod) || flaggedDeviceIDsLength == 0 {
 					fmt.Printf("not enough flagged geolocations: %v < %v, and not enough time elapsed: %v < %v\n", flaggedDeviceIDsLength, bufferSize, time.Since(timeAtLastSend), bufferPeriod)
 					continue
 				}
@@ -157,6 +157,9 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 					} else {
 						fmt.Printf("geolocation not found after notification: %v\n", g)
 					}
+				}
+				if len(geolocationsWithoutNil) == 0 {
+					continue
 				}
 
 				// send flagged geolocations to the websocket
