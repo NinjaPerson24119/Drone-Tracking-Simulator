@@ -117,6 +117,7 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 		checkPeriod := time.Millisecond * 10
 		go func() {
 			for {
+				fmt.Print("checking for flagged geolocations\n")
 				if wsClosed.Load() {
 					fmt.Print("websocket closed while processing flagged geolocations")
 					return
