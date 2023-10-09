@@ -45,7 +45,7 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 				return nil
 			})
 			for {
-				if _, _, err := ws.NextReader(); err != nil {
+				if _, _, err := ws.ReadMessage(); err != nil {
 					fmt.Printf("error reading next reader from websocket: %v\n", err)
 					ws.Close()
 					break
