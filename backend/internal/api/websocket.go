@@ -92,27 +92,9 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 			wsClosed.Store(true)
 		}()
 
-		// listen to updates and send new geolocations as they occur
+		// buffer geolocations
 		muFlaggedDeviceIDs := sync.Mutex{}
 		flaggedDeviceIDs := map[string]bool{}
-		go func() {
-			repo.ListenToGeolocationInserted(c.Request.Context(), func(deviceID string) error {
-				muFlaggedDeviceIDs.Lock()
-				flaggedDeviceIDs[deviceID] = true
-				muFlaggedDeviceIDs.Unlock()
-				fmt.Printf("flagged geolocation inserted: %v\n", deviceID)
-
-				if wsClosed.Load() {
-					return fmt.Errorf("websocket closed while handling geolocation inserted")
-				}
-				return nil
-			})
-			if err != nil {
-				fmt.Printf("error listening to geolocation inserted: %v\n", err)
-				return
-			}
-		}()
-
 		bufferSize := 10
 		bufferPeriod := time.Second / 2
 		timeAtLastSend := time.Now()
@@ -201,13 +183,23 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 			fmt.Printf("error writing json to websocket: %v\n", err)
 			return
 		}
+		fmt.Print("sent complete geolocations update to websocket\n")
 
-		// wait for websocket to close
-		for {
+		// listen to updates and send new geolocations as they occur
+		err = repo.ListenToGeolocationInserted(c.Request.Context(), func(deviceID string) error {
+			muFlaggedDeviceIDs.Lock()
+			flaggedDeviceIDs[deviceID] = true
+			muFlaggedDeviceIDs.Unlock()
+			fmt.Printf("flagged geolocation inserted: %v\n", deviceID)
+
 			if wsClosed.Load() {
-				return
+				return fmt.Errorf("websocket closed while handling geolocation inserted")
 			}
-			time.Sleep(time.Second)
+			return nil
+		})
+		if err != nil {
+			fmt.Printf("error listening to geolocation inserted: %v\n", err)
+			return
 		}
 	}
 }
