@@ -12,12 +12,13 @@ import (
 )
 
 type SimulatedDevice struct {
-	device                 *database.Device
-	geolocation            *database.DeviceGeolocation
-	stepDisplacementX      float64
-	stepDisplacementY      float64
-	noSwitchDirectionSteps int
-	lastUpdate             time.Time
+	device            *database.Device
+	geolocation       *database.DeviceGeolocation
+	stepDisplacementX float64
+	stepDisplacementY float64
+	// if this is >0, we won't switch directions until N steps have passed
+	switchDirectionCooldownSteps int
+	lastUpdate                   time.Time
 }
 
 type SimulatorImpl struct {
@@ -137,33 +138,38 @@ func (s *SimulatorImpl) stepDevices(ctx context.Context) error {
 
 		// switch direction if we're outside the circle
 		distanceSquaredFromCenter := math.Pow(device.geolocation.Latitude-s.centerLatitude, 2) + math.Pow(device.geolocation.Longitude-s.centerLongitude, 2)
-		if distanceSquaredFromCenter > math.Pow(s.radius, 2) && device.noSwitchDirectionSteps <= 0 {
+		if distanceSquaredFromCenter > math.Pow(s.radius, 2) && device.switchDirectionCooldownSteps <= 0 {
 			//fmt.Printf("switching direction\n")
 			device.stepDisplacementX *= -1
 			device.stepDisplacementY *= -1
-			device.noSwitchDirectionSteps = 5
+			device.switchDirectionCooldownSteps = 5
 		}
-		device.noSwitchDirectionSteps--
+		device.switchDirectionCooldownSteps--
 
 		// NOTE: this would be more efficient if we batched the inserts
 		// However, we can't batch real inserts, so we shouldn't batch simulated inserts
 		// We want this to model the insertion pattern of real devices
-		//go func() {
-		retries := 0
-		var err error
-		for retries < s.maxInsertRetries {
-			err := s.repo.InsertGeolocation(ctx, device.geolocation)
-			if err == nil {
-				break
+		//
+		// We want to update the devices at roughly the same time, so we don't want to wait
+		// for the insert to complete before starting the next one
+		//
+		// TODO: this needs to execute from a buffer and thread pool to avoid OOM if the DB is too slow
+		go func(d *SimulatedDevice) {
+			retries := 0
+			var err error
+			for retries < s.maxInsertRetries {
+				err := s.repo.InsertGeolocation(ctx, d.geolocation)
+				if err == nil {
+					break
+				}
+				retries++
+				time.Sleep(s.insertRetryTime)
 			}
-			retries++
-			time.Sleep(s.insertRetryTime)
-		}
-		if retries > s.maxInsertRetries {
-			fmt.Printf("Failed to insert geolocation after %d retries: %v\n", retries, err)
-			return err
-		}
-		//}()
+			if retries > s.maxInsertRetries {
+				fmt.Printf("Failed to insert geolocation after %d retries: %v\n", retries, err)
+				return
+			}
+		}(device)
 
 		device.lastUpdate = time.Now()
 	}
