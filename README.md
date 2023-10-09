@@ -33,6 +33,7 @@ TODO: sequence diagram
 - https://lwebapp.com/en/post/go-websocket-simple-server
 - https://docs.mapbox.com/mapbox-gl-js/example/cluster/
 - https://github.com/gorilla/websocket/blob/main/examples/chat/client.go
+- https://docs.mapbox.com/mapbox-gl-js/example/cluster/
 
 # Corners cut
 - Write service layer

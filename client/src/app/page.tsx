@@ -18,16 +18,57 @@ interface Geolocation {
   longitude: number;
 }
 
-function GeolocationsToFeatureCollection(geolocations: Geolocation[]): Feature<Geometry, GeoJsonProperties>[] {
-  return geolocations.map((geolocation) => {
+interface GeolocationCluster {
+  avgLatitude: number;
+  avgLongitude: number;
+  geolocations: Geolocation[];
+}
+
+function GeolocationsToClusters(geolocations: Map<string, Geolocation>, clusterDistance: number): Array<GeolocationCluster> {
+  const maxDistSquared = Math.pow(clusterDistance, 2);
+  const clusters = new Array<GeolocationCluster>();
+  for (const geolocation of geolocations.values()) {
+    let nearestDistance = 0;
+    let nearestCluster: GeolocationCluster | null = null;
+    // iterate clusters to find the nearest one
+    for (const cluster of clusters) {
+      const distSquared = 
+        Math.pow(cluster.avgLatitude - geolocation.latitude, 2) +
+        Math.pow(cluster.avgLongitude - geolocation.longitude, 2)
+      if (distSquared > maxDistSquared) {
+        continue;
+      }
+      nearestDistance = distSquared;
+      nearestCluster = cluster;
+    }
+    // if nothing is within the cluster distance, create a singleton cluster
+    if (nearestCluster == null) {
+      
+      clusters.push({
+        avgLatitude: geolocation.latitude,
+        avgLongitude: geolocation.longitude,
+        geolocations: [geolocation],
+      });
+    } else {
+      // otherwise, add the geolocation to the nearest cluster
+      nearestCluster.geolocations.push(geolocation);
+      nearestCluster.avgLatitude = (nearestCluster.avgLatitude + geolocation.latitude) / 2;
+      nearestCluster.avgLongitude = (nearestCluster.avgLongitude + geolocation.longitude) / 2;
+    }
+  }
+  return clusters;
+}
+
+function GeolocationClustersToFeatureCollection(clusters: GeolocationCluster[]): Feature<Geometry, GeoJsonProperties>[] {
+  return clusters.map((cluster, idx) => {
     return {
       type: 'Feature',
       geometry: {
         type: 'Point',
-        coordinates: [geolocation.longitude, geolocation.latitude],
+        coordinates: [cluster.avgLongitude, cluster.avgLatitude],
       },
       properties: {
-        id: geolocation.device_id,
+        id: `cluster-${idx}`,
       },
     };
   });
@@ -35,6 +76,7 @@ function GeolocationsToFeatureCollection(geolocations: Geolocation[]): Feature<G
 
 export default function Home() {
   const [geolocations, setGeolocations] = useState<Map<string, Geolocation>>(new Map<string, Geolocation>());
+  const [geolocationClusters, setGeolocationClusters] = useState<Map<string, GeolocationCluster>>(new Map<string, GeolocationCluster>());
   const [layerAdded, setLayerAdded] = useState<boolean>(false);
   const [mapStyleLoaded, setMapStyleLoaded] = useState<boolean>(false);
   const [socketShouldReconnect, setSocketShouldReconnect] = useState<boolean>(true);
@@ -146,7 +188,7 @@ export default function Home() {
       if (ws.readyState !== 1) {
         console.log('WebSocket not ready.');
         return;
-      } 
+      }
       if (!lastPing) {
         sendPing();
         return;
@@ -159,73 +201,85 @@ export default function Home() {
       }
     });
 
-      setSocketShouldReconnect(false);
-      const resetConnection = () => {
-        console.log('WebSocket connection lost.');
+    setSocketShouldReconnect(false);
+    const resetConnection = () => {
+      console.log('WebSocket connection lost.');
+      ws.close();
+      socket.current = null;
+      setSocketShouldReconnect(true);
+      setLastPing(null);
+      clearInterval(intervalId);
+    }
+    socket.current = ws;
+    return () => {
+      if (ws.readyState === 1) {
         ws.close();
-        socket.current = null;
-        setSocketShouldReconnect(true);
-        setLastPing(null);
         clearInterval(intervalId);
       }
-      socket.current = ws;
-      return () => {
-        if (ws.readyState === 1) {
-          ws.close();
-          clearInterval(intervalId);
-        }
-      };
-    });
+    };
+  });
 
-    // add/update markers as layers on map
-    useEffect(() => {
-      if (!map.current) {
-        return;
-      }
-      if (!mapStyleLoaded) {
-        return;
-      }
-      if (!layerAdded) {
-        map.current.addSource('device-locations', {
-          type: 'geojson',
-          data: {
-            type: 'FeatureCollection',
-            features: GeolocationsToFeatureCollection(Array.from(geolocations.values())),
-          }
-        });
-        map.current.addLayer({
-          id: 'device-locations-layer',
-          type: 'circle',
-          source: 'device-locations',
-          paint: {
-            'circle-color': '#11b4da',
-            'circle-radius': 10,
-            'circle-stroke-width': 1,
-            'circle-stroke-color': '#fff'
-          }
-        });
-        setLayerAdded(true);
-      }
+  // add/update markers as layers on map
+  useEffect(() => {
+    if (!map.current) {
+      return;
+    }
+    if (!mapStyleLoaded) {
+      return;
+    }
 
-      // TODO: figure out what to cast this to because setData() exists
-      map.current.getSource('device-locations').setData(
-        {
+    // TODO: linearly relate zoom to the cluster distance
+    const clusterDistance = 0.01;
+    const clusters = GeolocationsToClusters(geolocations, clusterDistance);
+
+    if (!layerAdded) {
+      map.current.addSource('device-locations', {
+        type: 'geojson',
+        data: {
           type: 'FeatureCollection',
-          features: GeolocationsToFeatureCollection(Array.from(geolocations.values())),
+          features: GeolocationClustersToFeatureCollection(clusters),
         }
-      );
-    }, [geolocations])
+      });
+      map.current.addLayer({
+        id: 'device-locations-layer',
+        type: 'circle',
+        source: 'device-locations',
+        paint: {
+          'circle-color': '#11b4da',
+          'circle-radius': 10,
+          'circle-stroke-width': 1,
+          'circle-stroke-color': '#fff'
+        },
+        layout: {
+          'text-field': ['get', 'point_count_abbreviated'],
+          'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+          'text-size': 12
+          }
+      });
+      setLayerAdded(true);
+    }
 
-    return (
-      <main className={styles.main}>
-        <div className={styles.detailsContainer}>
-          <h1>Drone Tracker</h1>
-          <br />
-          <p>Latitude: {latitude}</p>
-          <p>Longitude: {longitude}</p>
-          <p>Zoom: {zoom}</p>
-        </div>
-        <div ref={mapContainer} className={styles.mapContainer}></div>
-      </main>
-    )
-  }
+    
+
+    // TODO: figure out what to cast this to because setData() exists
+    map.current.getSource('device-locations').setData(
+      {
+        type: 'FeatureCollection',
+        features: GeolocationClustersToFeatureCollection(clusters),
+      }
+    );
+  }, [geolocations])
+
+  return (
+    <main className={styles.main}>
+      <div className={styles.detailsContainer}>
+        <h1>Drone Tracker</h1>
+        <br />
+        <p>Latitude: {latitude}</p>
+        <p>Longitude: {longitude}</p>
+        <p>Zoom: {zoom}</p>
+      </div>
+      <div ref={mapContainer} className={styles.mapContainer}></div>
+    </main>
+  )
+}
