@@ -64,7 +64,7 @@ func (s *SimulatorImpl) Run(ctx context.Context) error {
 			return nil
 		default:
 			err := s.stepDevices(ctx)
-			if err == nil {
+			if err != nil {
 				break
 			}
 			fmt.Printf("sleeping for %f secs\n", s.sleepTime.Seconds())
@@ -143,6 +143,7 @@ func (s *SimulatorImpl) stepDevices(ctx context.Context) error {
 		// We want this to model the insertion pattern of real devices
 		//go func() {
 		retries := 0
+		var err error
 		for retries < s.maxInsertRetries {
 			err := s.repo.InsertGeolocation(ctx, device.geolocation)
 			if err == nil {
