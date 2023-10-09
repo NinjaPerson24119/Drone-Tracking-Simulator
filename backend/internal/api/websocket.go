@@ -206,6 +206,7 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 			return
 		}
 		fmt.Print("websocket connection closed\n")
+		wsClosed.Store(true)
 	}
 }
 
