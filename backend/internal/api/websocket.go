@@ -68,7 +68,6 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 							fmt.Printf("error writing user-level pong message to websocket: %v\n", err)
 							break
 						}
-						fmt.Print("user pong\n")
 					}
 				}
 			}
@@ -84,7 +83,6 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 					fmt.Printf("error writing ping message to websocket: %v\n", err)
 					break
 				}
-				fmt.Print("ping\n")
 				time.Sleep(pingPeriod)
 			}
 		}()
@@ -133,9 +131,10 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 
 func getLatestGeolocations(ctx context.Context, repo database.Repo) ([]*database.DeviceGeolocation, error) {
 	geolocations := []*database.DeviceGeolocation{}
+	page := 1
 	for {
 		geolocationsPage, err := repo.GetLatestGeolocations(ctx, filters.PageOptions{
-			Page:     1,
+			Page:     page,
 			PageSize: 100,
 		})
 		if err != nil {
