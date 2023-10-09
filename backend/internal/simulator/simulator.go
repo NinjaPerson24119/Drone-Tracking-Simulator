@@ -67,7 +67,6 @@ func (s *SimulatorImpl) Run(ctx context.Context) error {
 			if err != nil {
 				break
 			}
-			fmt.Printf("sleeping for %f secs\n", s.sleepTime.Seconds())
 			time.Sleep(s.sleepTime)
 		}
 	}
@@ -122,12 +121,10 @@ func (s *SimulatorImpl) setupDevices(ctx context.Context) error {
 }
 
 func (s *SimulatorImpl) stepDevices(ctx context.Context) error {
-	fmt.Print("stepping devices\n")
 	for _, device := range s.simulatedDevices {
 		device.geolocation.EventTime = time.Now()
 
 		deltaSeconds := time.Since(device.lastUpdate).Seconds()
-		fmt.Printf("deltaSeconds: %f\n", deltaSeconds)
 		device.geolocation.Latitude += deltaSeconds * device.stepDisplacementY
 		device.geolocation.Longitude += deltaSeconds * device.stepDisplacementX
 
@@ -160,6 +157,5 @@ func (s *SimulatorImpl) stepDevices(ctx context.Context) error {
 
 		device.lastUpdate = time.Now()
 	}
-	fmt.Print("finished stepping devices\n")
 	return nil
 }
