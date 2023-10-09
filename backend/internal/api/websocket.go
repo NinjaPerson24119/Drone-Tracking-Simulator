@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/NinjaPerson24119/MapProject/backend/internal/constants"
 	"github.com/NinjaPerson24119/MapProject/backend/internal/database"
 	"github.com/NinjaPerson24119/MapProject/backend/internal/filters"
 	"github.com/gin-gonic/gin"
@@ -97,7 +98,7 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 		// buffer geolocations
 		muFlaggedDeviceIDs := sync.Mutex{}
 		flaggedDeviceIDs := map[string]bool{}
-		bufferSize := 10
+		bufferSize := constants.SimulatedDevices
 		bufferPeriod := time.Second / 2
 		timeAtLastSend := time.Now()
 		checkPeriod := time.Millisecond * 10
@@ -223,6 +224,9 @@ func getLatestGeolocations(ctx context.Context, repo database.Repo) ([]*database
 			break
 		}
 		geolocations = append(geolocations, geolocationsPage...)
+		if len(geolocations) >= constants.SimulatedDevices {
+			break
+		}
 	}
-	return geolocations, nil
+	return geolocations[:constants.SimulatedDevices], nil
 }

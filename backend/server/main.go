@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/NinjaPerson24119/MapProject/backend/internal/api"
+	"github.com/NinjaPerson24119/MapProject/backend/internal/constants"
 	"github.com/NinjaPerson24119/MapProject/backend/internal/database"
 	"github.com/NinjaPerson24119/MapProject/backend/internal/simulator"
 	"github.com/gin-gonic/gin"
@@ -36,7 +37,7 @@ func main() {
 	// Edmonton legislature
 	latitude := 53.5357
 	longitude := -113.5068
-	simulator := simulator.New(repo, 10, latitude, longitude, 0.25, 10, 0.05)
+	simulator := simulator.New(repo, constants.SimulatedDevices, latitude, longitude, 0.25, 10, 0.05)
 	ctxWithCancel, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go simulator.Run(ctxWithCancel)
