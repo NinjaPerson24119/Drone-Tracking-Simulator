@@ -88,7 +88,10 @@ export default function Home() {
     }
     console.log('Connecting to WebSocket...')
     const ws = new WebSocket(geolocationStreamAPI);
-    
+    const sendPing = () => {
+      setLastPing(new Date());
+      ws.send('ping');
+    }
     ws.addEventListener('open', () => {
       console.log('WebSocket connection established.');
     });
@@ -101,32 +104,33 @@ export default function Home() {
       resetConnection();
     });
     ws.addEventListener('message', (event) => {
+      if (event.data === 'pong') {
+        console.log('user ping');
+        setTimeout(sendPing, 2000);
+        return;
+      }
+
       try {
-        console.log('got geo');
         const json: GeolocationMessage = JSON.parse(event.data, (key, value) => {
           if (key === 'event_time' && typeof value === 'string') {
             return new Date(value);
           }
           return value;
         });
-        console.log(json);
         for (const geolocation of json.geolocations) {
           const lastGeolocation = geolocations.get(geolocation.device_id);
-          console.log('lastGeolocation');
           if (!lastGeolocation) {
             // new geolocation
-            console.log('new geolocation')
             geolocations.set(geolocation.device_id, geolocation);
             continue;
           }
           if (lastGeolocation.event_time > geolocation.event_time) {
             // stale geolocation
-            console.log('stale geolocation')
             continue;
           }
           // update geolocation
-          console.log('update geolocation')
           geolocations.set(geolocation.device_id, geolocation);
+          console.log("Updated Geolocation");
         }
         setGeolocations(new Map(geolocations));
       } catch (error) {
@@ -134,70 +138,95 @@ export default function Home() {
       }
     });
 
-    setSocketShouldReconnect(false);
-    const resetConnection = () => {
-      console.log('WebSocket connection lost.');
-      ws.close();
-      socket.current = null;
-      setSocketShouldReconnect(true);
-    }
-    socket.current = ws;
-    return () => {
-      if (ws.readyState === 1) {
-        ws.close();
+    // call socket on an interval and reconnect if needed
+    // browser will not send pings so we need to do this manually
+    const intervalId = setInterval(() => {
+      ws.dispatchEvent(new Event('checkPing'));
+    }, 3000);
+    ws.addEventListener('checkPing', () => {
+      if (ws.readyState !== 1) {
+        console.log('WebSocket not ready.');
+        return;
+      } 
+      if (!lastPing) {
+        sendPing();
+        return;
       }
-    };
-  });
+      const pingElapsed = new Date().getTime() - lastPing.getTime();
+      if (pingElapsed > 5000) {
+        console.log('Ping timeout.');
+        resetConnection();
+        return;
+      }
+    });
 
-  // add/update markers as layers on map
-  useEffect(() => {
-    if (!map.current) {
-      return;
-    }
-    if (!mapStyleLoaded) {
-      return;
-    }
-    if (!layerAdded) {
-      map.current.addSource('device-locations', {
-        type: 'geojson',
-        data: {
+      setSocketShouldReconnect(false);
+      const resetConnection = () => {
+        console.log('WebSocket connection lost.');
+        ws.close();
+        socket.current = null;
+        setSocketShouldReconnect(true);
+        setLastPing(null);
+        clearInterval(intervalId);
+      }
+      socket.current = ws;
+      return () => {
+        if (ws.readyState === 1) {
+          ws.close();
+          clearInterval(intervalId);
+        }
+      };
+    });
+
+    // add/update markers as layers on map
+    useEffect(() => {
+      if (!map.current) {
+        return;
+      }
+      if (!mapStyleLoaded) {
+        return;
+      }
+      if (!layerAdded) {
+        map.current.addSource('device-locations', {
+          type: 'geojson',
+          data: {
+            type: 'FeatureCollection',
+            features: GeolocationsToFeatureCollection(Array.from(geolocations.values())),
+          }
+        });
+        map.current.addLayer({
+          id: 'device-locations-layer',
+          type: 'circle',
+          source: 'device-locations',
+          paint: {
+            'circle-color': '#11b4da',
+            'circle-radius': 10,
+            'circle-stroke-width': 1,
+            'circle-stroke-color': '#fff'
+          }
+        });
+        setLayerAdded(true);
+      }
+
+      // TODO: figure out what to cast this to because setData() exists
+      map.current.getSource('device-locations').setData(
+        {
           type: 'FeatureCollection',
           features: GeolocationsToFeatureCollection(Array.from(geolocations.values())),
         }
-      });
-      map.current.addLayer({
-        id: 'device-locations-layer',
-        type: 'circle',
-        source: 'device-locations',
-        paint: {
-          'circle-color': '#11b4da',
-          'circle-radius': 10,
-          'circle-stroke-width': 1,
-          'circle-stroke-color': '#fff'
-        }
-      });
-      setLayerAdded(true);
-    }
+      );
+    }, [geolocations])
 
-    // TODO: figure out what to cast this to because setData() exists
-    map.current.getSource('device-locations').setData(
-      {
-        type: 'FeatureCollection',
-        features: GeolocationsToFeatureCollection(Array.from(geolocations.values())),
-      }
-    );
-  }, [geolocations])
-
-  return (
-    <main className={styles.main}>
-      <div className={styles.detailsContainer}>
-        <h1>Drone Tracker</h1>
-        <br />
-        <p>Latitude: {latitude}</p>
-        <p>Longitude: {longitude}</p>
-        <p>Zoom: {zoom}</p>
-      </div>
-      <div ref={mapContainer} className={styles.mapContainer}></div>
-    </main>
-  )
-}
+    return (
+      <main className={styles.main}>
+        <div className={styles.detailsContainer}>
+          <h1>Drone Tracker</h1>
+          <br />
+          <p>Latitude: {latitude}</p>
+          <p>Longitude: {longitude}</p>
+          <p>Zoom: {zoom}</p>
+        </div>
+        <div ref={mapContainer} className={styles.mapContainer}></div>
+      </main>
+    )
+  }
