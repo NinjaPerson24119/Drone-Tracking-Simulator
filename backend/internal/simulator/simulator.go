@@ -125,6 +125,7 @@ func (s *SimulatorImpl) stepDevices(ctx context.Context) error {
 		device.geolocation.EventTime = time.Now()
 
 		deltaSeconds := time.Since(device.lastUpdate).Seconds()
+		fmt.Printf("deltaSeconds: %f\n", deltaSeconds)
 		device.geolocation.Latitude += deltaSeconds * device.stepDisplacementY
 		device.geolocation.Longitude += deltaSeconds * device.stepDisplacementX
 
