@@ -12,11 +12,12 @@ import (
 )
 
 type SimulatedDevice struct {
-	device            *database.Device
-	geolocation       *database.DeviceGeolocation
-	stepDisplacementX float64
-	stepDisplacementY float64
-	lastUpdate        time.Time
+	device                 *database.Device
+	geolocation            *database.DeviceGeolocation
+	stepDisplacementX      float64
+	stepDisplacementY      float64
+	noSwitchDirectionSteps int
+	lastUpdate             time.Time
 }
 
 type SimulatorImpl struct {
@@ -136,11 +137,13 @@ func (s *SimulatorImpl) stepDevices(ctx context.Context) error {
 
 		// switch direction if we're outside the circle
 		distanceSquaredFromCenter := math.Pow(device.geolocation.Latitude-s.centerLatitude, 2) + math.Pow(device.geolocation.Longitude-s.centerLongitude, 2)
-		if distanceSquaredFromCenter > math.Pow(s.radius, 2) {
+		if distanceSquaredFromCenter > math.Pow(s.radius, 2) && device.noSwitchDirectionSteps <= 0 {
 			//fmt.Printf("switching direction\n")
 			device.stepDisplacementX *= -1
 			device.stepDisplacementY *= -1
+			device.noSwitchDirectionSteps = 5
 		}
+		device.noSwitchDirectionSteps--
 
 		// NOTE: this would be more efficient if we batched the inserts
 		// However, we can't batch real inserts, so we shouldn't batch simulated inserts
