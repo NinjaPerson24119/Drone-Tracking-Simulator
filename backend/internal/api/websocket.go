@@ -95,21 +95,23 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 		// listen to updates and send new geolocations as they occur
 		muFlaggedDeviceIDs := sync.Mutex{}
 		flaggedDeviceIDs := map[string]bool{}
-		err = repo.ListenToGeolocationInserted(c.Request.Context(), func(deviceID string) error {
-			muFlaggedDeviceIDs.Lock()
-			flaggedDeviceIDs[deviceID] = true
-			muFlaggedDeviceIDs.Unlock()
-			//fmt.Printf("flagged geolocation inserted: %v\n", deviceID)
+		go func() {
+			repo.ListenToGeolocationInserted(c.Request.Context(), func(deviceID string) error {
+				muFlaggedDeviceIDs.Lock()
+				flaggedDeviceIDs[deviceID] = true
+				muFlaggedDeviceIDs.Unlock()
+				//fmt.Printf("flagged geolocation inserted: %v\n", deviceID)
 
-			if wsClosed.Load() {
-				return fmt.Errorf("websocket closed while handling geolocation inserted")
+				if wsClosed.Load() {
+					return fmt.Errorf("websocket closed while handling geolocation inserted")
+				}
+				return nil
+			})
+			if err != nil {
+				fmt.Printf("error listening to geolocation inserted: %v\n", err)
+				return
 			}
-			return nil
-		})
-		if err != nil {
-			fmt.Printf("error listening to geolocation inserted: %v\n", err)
-			return
-		}
+		}()
 
 		bufferSize := 10
 		bufferPeriod := time.Second / 2
