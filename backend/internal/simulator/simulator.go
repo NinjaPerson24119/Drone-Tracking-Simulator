@@ -145,6 +145,9 @@ func (s *SimulatorImpl) stepDevices(ctx context.Context) error {
 			device.stepDisplacementY *= -1
 		}
 
+		// NOTE: this would be more efficient if we batched the inserts
+		// However, we can't batch real inserts, so we shouldn't batch simulated inserts
+		// We want this to model the insertion pattern of real devices
 		err := s.repo.InsertGeolocation(ctx, device.geolocation)
 		if err != nil {
 			return err
