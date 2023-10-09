@@ -71,7 +71,7 @@ func (s *SimulatorImpl) Run(ctx context.Context) error {
 			after := time.Now()
 			delta := after.Sub(before)
 			if delta > s.sleepTime {
-				fmt.Printf("stepDevices exhausted allocated step time: %v\n", delta)
+				fmt.Printf("stepDevices exhausted allocated step time: %v > %v\n", delta, s.sleepTime)
 			}
 			time.Sleep(s.sleepTime - delta)
 		}
