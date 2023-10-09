@@ -92,24 +92,6 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 			wsClosed.Store(true)
 		}()
 
-		// begin connection by sending all geolocations
-		geolocations, err := getLatestGeolocations(c.Request.Context(), repo)
-		if err != nil {
-			c.Status(http.StatusInternalServerError)
-			return
-		}
-		json := GeolocationsWebSocketMessage{
-			Geolocations: geolocations,
-		}
-		muWriter.Lock()
-		ws.SetWriteDeadline(time.Now().Add(writeWait))
-		err = ws.WriteJSON(json)
-		muWriter.Unlock()
-		if err != nil {
-			fmt.Printf("error writing json to websocket: %v\n", err)
-			return
-		}
-
 		// listen to updates and send new geolocations as they occur
 		muFlaggedDeviceIDs := sync.Mutex{}
 		flaggedDeviceIDs := map[string]bool{}
@@ -180,6 +162,24 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 				fmt.Printf("sent %v geolocations to websocket\n", len(geolocations))
 			}
 		}()
+
+		// begin connection by sending all geolocations
+		geolocations, err := getLatestGeolocations(c.Request.Context(), repo)
+		if err != nil {
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+		json := GeolocationsWebSocketMessage{
+			Geolocations: geolocations,
+		}
+		muWriter.Lock()
+		ws.SetWriteDeadline(time.Now().Add(writeWait))
+		err = ws.WriteJSON(json)
+		muWriter.Unlock()
+		if err != nil {
+			fmt.Printf("error writing json to websocket: %v\n", err)
+			return
+		}
 	}
 }
 
