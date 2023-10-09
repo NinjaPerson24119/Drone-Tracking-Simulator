@@ -99,7 +99,12 @@ export default function Home() {
     });
     ws.addEventListener('message', (event) => {
       try {
-        const json: GeolocationMessage = JSON.parse(event.data);
+        const json: GeolocationMessage = JSON.parse(event.data, (key, value) => {
+          if (key === 'event_time' && typeof value === 'string') {
+            return new Date(value);
+          }
+          return value;
+        });
         for (const geolocation of json.geolocations) {
           const lastGeolocation = geolocations.get(geolocation.device_id);
           if (!lastGeolocation) {
