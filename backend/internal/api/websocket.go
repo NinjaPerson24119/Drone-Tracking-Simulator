@@ -169,6 +169,7 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 		}()
 
 		// begin connection by sending all geolocations
+		fmt.Print("sending complete geolocations update to websocket\n")
 		geolocations, err := getLatestGeolocations(c.Request.Context(), repo)
 		if err != nil {
 			c.Status(http.StatusInternalServerError)
