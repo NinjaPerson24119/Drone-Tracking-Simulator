@@ -72,7 +72,7 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 			}
 			err = ws.WriteJSON(json)
 			if err != nil {
-				closed := handleCloseError(err, "writing to websocket")
+				closed := handleCloseError(err, "writing geolocation to websocket")
 				if closed {
 					return err
 				}

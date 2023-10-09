@@ -139,10 +139,8 @@ func (s *SimulatorImpl) stepDevices(ctx context.Context) error {
 		// However, we can't batch real inserts, so we shouldn't batch simulated inserts
 		// We want this to model the insertion pattern of real devices
 		go func() {
-
 			retries := 0
 			for {
-				s.repo.InsertGeolocation(ctx, device.geolocation)
 				err := s.repo.InsertGeolocation(ctx, device.geolocation)
 				if err == nil {
 					break
