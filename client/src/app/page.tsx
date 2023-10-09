@@ -105,8 +105,7 @@ export default function Home() {
     });
     ws.addEventListener('message', (event) => {
       if (event.data === 'pong') {
-        console.log('user ping');
-        setTimeout(sendPing, 2000);
+        setTimeout(sendPing, 5000);
         return;
       }
 
@@ -142,7 +141,7 @@ export default function Home() {
     // browser will not send pings so we need to do this manually
     const intervalId = setInterval(() => {
       ws.dispatchEvent(new Event('checkPing'));
-    }, 3000);
+    }, 6000);
     ws.addEventListener('checkPing', () => {
       if (ws.readyState !== 1) {
         console.log('WebSocket not ready.');
@@ -153,7 +152,7 @@ export default function Home() {
         return;
       }
       const pingElapsed = new Date().getTime() - lastPing.getTime();
-      if (pingElapsed > 5000) {
+      if (pingElapsed > 7000) {
         console.log('Ping timeout.');
         resetConnection();
         return;
