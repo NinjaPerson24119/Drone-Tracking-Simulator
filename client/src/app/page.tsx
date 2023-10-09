@@ -38,6 +38,8 @@ export default function Home() {
   const [layerAdded, setLayerAdded] = useState<boolean>(false);
   const [mapStyleLoaded, setMapStyleLoaded] = useState<boolean>(false);
   const [socketShouldReconnect, setSocketShouldReconnect] = useState<boolean>(true);
+  const [lastPing, setLastPing] = useState<Date | null>(null);
+  const [lastPong, setLastPong] = useState<Date | null>(null);
   const socket = useRef<WebSocket | null>(null);
 
   const mapContainer = useRef<HTMLDivElement | null>(null);
@@ -98,6 +100,12 @@ export default function Home() {
       console.error('WebSocket error:', error);
     });
     ws.addEventListener('message', (event) => {
+      if (event.data === 'pong') {
+        setLastPong(new Date());
+        console.log('pong');
+        return;
+      }
+
       try {
         const json: GeolocationMessage = JSON.parse(event.data, (key, value) => {
           if (key === 'event_time' && typeof value === 'string') {
@@ -126,14 +134,24 @@ export default function Home() {
 
     // call socket on an interval and reconnect if needed
     const intervalId = setInterval(() => {
-      if (ws.readyState === 1) {
-        ws.send('ping');
-      } else {
+      const resetConnection = () => {
         console.log('WebSocket connection lost.');
         ws.close();
         socket.current = null;
         setSocketShouldReconnect(true);
         clearInterval(intervalId);
+      }
+      if (ws.readyState === 1) {
+        if (lastPing && lastPong && lastPing > lastPong) {
+          console.log('Ping timeout.');
+          resetConnection();
+          return;
+        }
+        ws.send('ping');
+        setLastPing(new Date());
+        console.log('ping');
+      } else {
+        resetConnection();
       }
     }, 5000);
     setSocketShouldReconnect(false);

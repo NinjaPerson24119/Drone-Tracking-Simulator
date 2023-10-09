@@ -19,6 +19,16 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
+func handleCloseError(err error, whenMessage string) (isClosed bool) {
+	if closeErr, ok := err.(*websocket.CloseError); ok {
+		fmt.Printf("websocket closed during %s: %s", whenMessage, closeErr.Error())
+		return true
+	} else {
+		fmt.Printf("error %s: %v\n", whenMessage, err)
+		return false
+	}
+}
+
 func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		ws, err := upgrader.Upgrade(c.Writer, c.Request, nil)
@@ -28,18 +38,45 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 		}
 		defer ws.Close()
 
+		// ping pong
+		go func() {
+			for {
+				msgType, bytes, err := ws.ReadMessage()
+				if err != nil {
+					isClosed := handleCloseError(err, "reading ping from websocket")
+					if isClosed {
+						return
+					}
+					continue
+				}
+				if msgType != websocket.TextMessage {
+					continue
+				}
+				if string(bytes) == "ping" {
+					err = ws.WriteMessage(websocket.TextMessage, []byte("pong"))
+					if err != nil {
+						isClosed := handleCloseError(err, "writing pong to websocket")
+						if isClosed {
+							return
+						}
+						continue
+					}
+				}
+			}
+		}()
+
+		// relay geolocation inserts
 		err = repo.ListenToGeolocationInserted(c.Request.Context(), func(geolocation *database.DeviceGeolocation) error {
 			json := GeolocationsWebSocketMessage{
 				Geolocations: []*database.DeviceGeolocation{geolocation},
 			}
 			err = ws.WriteJSON(json)
 			if err != nil {
-				if closeErr, ok := err.(*websocket.CloseError); ok {
-					fmt.Printf("websocket closed: %s", closeErr.Error())
-					return nil
-				} else {
-					return fmt.Errorf("error writing to websocket: %v\n", err)
+				closed := handleCloseError(err, "writing to websocket")
+				if closed {
+					return err
 				}
+				return nil
 			}
 			return nil
 		})
