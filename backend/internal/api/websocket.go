@@ -100,7 +100,7 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 				muFlaggedDeviceIDs.Lock()
 				flaggedDeviceIDs[deviceID] = true
 				muFlaggedDeviceIDs.Unlock()
-				//fmt.Printf("flagged geolocation inserted: %v\n", deviceID)
+				fmt.Printf("flagged geolocation inserted: %v\n", deviceID)
 
 				if wsClosed.Load() {
 					return fmt.Errorf("websocket closed while handling geolocation inserted")
