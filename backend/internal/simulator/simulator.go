@@ -63,11 +63,17 @@ func (s *SimulatorImpl) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		default:
+			before := time.Now()
 			err := s.stepDevices(ctx)
 			if err != nil {
 				break
 			}
-			time.Sleep(s.sleepTime)
+			after := time.Now()
+			delta := after.Sub(before)
+			if delta > s.sleepTime {
+				fmt.Printf("stepDevices exhausted allocated step time: %v\n", delta)
+			}
+			time.Sleep(s.sleepTime - delta)
 		}
 	}
 }
