@@ -133,6 +133,7 @@ export default function Home() {
         ws.close();
         socket.current = null;
         setSocketShouldReconnect(true);
+        clearInterval(intervalId);
       }
     }, 5000);
     setSocketShouldReconnect(false);
