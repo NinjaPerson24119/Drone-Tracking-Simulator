@@ -23,7 +23,7 @@ func New(ctx context.Context, connectionURL string) (*RepoImpl, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse postgres connection url: %v", err)
 	}
-	config.MinConns = 5
+	config.MinConns = 10
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to postgres: %v", err)

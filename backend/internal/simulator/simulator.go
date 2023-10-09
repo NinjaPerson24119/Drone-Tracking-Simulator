@@ -28,27 +28,26 @@ type SimulatorImpl struct {
 	centerLatitude  float64
 	centerLongitude float64
 	radius          float64
-	frequency       int
+	frequency       float64
 	sleepTimeMs     time.Duration
 	movementPerSec  float64
 
-	maxRetries  int
-	retryTimeMs time.Duration
+	maxInsertRetries  int
+	insertRetryTimeMs time.Duration
 }
 
-func New(repo database.Repo, noDevices int, centerLatitude float64, centerLongitude float64, radius float64, frequency int, movementPerSec float64) *SimulatorImpl {
-	sleepTimeMs := time.Duration(1000/frequency) * time.Millisecond
+func New(repo database.Repo, noDevices int, centerLatitude float64, centerLongitude float64, radius float64, frequency float64, movementPerSec float64) *SimulatorImpl {
 	return &SimulatorImpl{
-		repo:            repo,
-		noDevices:       noDevices,
-		centerLatitude:  centerLatitude,
-		centerLongitude: centerLongitude,
-		radius:          radius,
-		frequency:       frequency,
-		sleepTimeMs:     sleepTimeMs,
-		movementPerSec:  movementPerSec,
-		maxRetries:      5,
-		retryTimeMs:     sleepTimeMs / 5,
+		repo:              repo,
+		noDevices:         noDevices,
+		centerLatitude:    centerLatitude,
+		centerLongitude:   centerLongitude,
+		radius:            radius,
+		frequency:         frequency,
+		sleepTimeMs:       time.Duration(1.0 / frequency * float64(time.Millisecond)),
+		movementPerSec:    movementPerSec,
+		maxInsertRetries:  5,
+		insertRetryTimeMs: time.Duration(2 * time.Millisecond),
 	}
 }
 
@@ -64,18 +63,9 @@ func (s *SimulatorImpl) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		default:
-			retries := 0
-			for {
-				err := s.stepDevices(ctx)
-				if err == nil {
-					break
-				}
-				retries++
-				if retries > s.maxRetries {
-					fmt.Printf("Simulator died after %d retries. Error stepping devices: %v\n", retries, err)
-					return err
-				}
-				time.Sleep(s.retryTimeMs)
+			err := s.stepDevices(ctx)
+			if err == nil {
+				break
 			}
 			time.Sleep(s.sleepTimeMs)
 		}
@@ -149,13 +139,22 @@ func (s *SimulatorImpl) stepDevices(ctx context.Context) error {
 		// NOTE: this would be more efficient if we batched the inserts
 		// However, we can't batch real inserts, so we shouldn't batch simulated inserts
 		// We want this to model the insertion pattern of real devices
-		before := time.Now()
-		err := s.repo.InsertGeolocation(ctx, device.geolocation)
-		if err != nil {
-			return err
-		}
-		after := time.Now()
-		fmt.Printf("Inserted geolocation for device %s in %v\n", device.device.DeviceID, after.Sub(before))
+		go func() {
+
+			retries := 0
+			for {
+				s.repo.InsertGeolocation(ctx, device.geolocation)
+				err := s.repo.InsertGeolocation(ctx, device.geolocation)
+				if err == nil {
+					break
+				}
+				retries++
+				if retries > s.maxInsertRetries {
+					fmt.Printf("Failed to insert geolocation after %d retries: %v\n", retries, err)
+				}
+				time.Sleep(s.insertRetryTimeMs)
+			}
+		}()
 
 		device.lastUpdate = time.Now()
 	}
