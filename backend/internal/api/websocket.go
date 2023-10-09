@@ -124,11 +124,12 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 
 				// wait until there are enough flagged geolocations or enough time has passed
 				muFlaggedDeviceIDs.Lock()
-				if len(flaggedDeviceIDs) < bufferSize && time.Since(timeAtLastSend) < bufferPeriod {
-					muFlaggedDeviceIDs.Unlock()
+				flaggedDeviceIDsLength := len(flaggedDeviceIDs)
+				muFlaggedDeviceIDs.Unlock()
+				if flaggedDeviceIDsLength < bufferSize && time.Since(timeAtLastSend) < bufferPeriod {
+					fmt.Printf("not enough flagged geolocations: %v < %v, and not enough time elapsed: %v < %v\n", flaggedDeviceIDsLength, bufferSize, time.Since(timeAtLastSend), bufferPeriod)
 					continue
 				}
-				muFlaggedDeviceIDs.Unlock()
 
 				// get flagged geolocations as a list of IDs, then clear the flag
 				geolocationIDs := []string{}
