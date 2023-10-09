@@ -32,9 +32,10 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 
 		// it is safe to have one reader and one writer concurrently
 		muWriter := sync.Mutex{}
+		writeWait := 10 * time.Second
 
 		// ping pong
-		pongWait := 5 * time.Second
+		pongWait := 60 * time.Second
 		pingPeriod := (pongWait * 9) * 10
 		go func() {
 			ws.SetReadDeadline(time.Now().Add(pongWait))
@@ -51,8 +52,6 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 				}
 			}
 		}()
-
-		writeWait := 3 * time.Second
 		go func() {
 			for {
 				time.Sleep(pingPeriod)
@@ -66,6 +65,7 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 					fmt.Printf("error writing ping message to websocket: %v\n", err)
 					break
 				}
+				fmt.Print("ping\n")
 			}
 		}()
 
