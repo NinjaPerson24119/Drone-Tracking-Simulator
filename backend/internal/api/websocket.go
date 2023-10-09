@@ -39,6 +39,7 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 		go func() {
 			ws.SetReadDeadline(time.Now().Add(pongWait))
 			ws.SetPongHandler(func(string) error {
+				fmt.Print("pong\n")
 				ws.SetReadDeadline(time.Now().Add(pongWait))
 				return nil
 			})
