@@ -143,17 +143,17 @@ func (s *SimulatorImpl) stepDevices(ctx context.Context) error {
 		// We want this to model the insertion pattern of real devices
 		//go func() {
 		retries := 0
-		for {
+		for retries < s.maxInsertRetries {
 			err := s.repo.InsertGeolocation(ctx, device.geolocation)
 			if err == nil {
 				break
 			}
 			retries++
-			if retries > s.maxInsertRetries {
-				fmt.Printf("Failed to insert geolocation after %d retries: %v\n", retries, err)
-				return err
-			}
 			time.Sleep(s.insertRetryTime)
+		}
+		if retries > s.maxInsertRetries {
+			fmt.Printf("Failed to insert geolocation after %d retries: %v\n", retries, err)
+			return err
 		}
 		//}()
 
