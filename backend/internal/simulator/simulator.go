@@ -148,6 +148,7 @@ func (s *SimulatorImpl) stepDevices(ctx context.Context) error {
 			retries++
 			if retries > s.maxInsertRetries {
 				fmt.Printf("Failed to insert geolocation after %d retries: %v\n", retries, err)
+				return err
 			}
 			time.Sleep(s.insertRetryTimeMs)
 		}
