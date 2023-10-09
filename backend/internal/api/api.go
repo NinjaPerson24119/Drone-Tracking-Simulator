@@ -156,5 +156,5 @@ func RouterWithGeolocationAPI(router *gin.Engine, repo database.Repo) {
 		c.JSON(http.StatusOK, resp)
 	})
 
-	//router.GET("/geolocation/stream", geolocationsWebSocketGenerator(repo))
+	router.GET("/geolocation/stream", geolocationsWebSocketGenerator(repo))
 }
