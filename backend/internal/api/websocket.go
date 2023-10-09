@@ -233,5 +233,6 @@ func getLatestGeolocations(ctx context.Context, repo database.Repo) ([]*database
 		}
 		page++
 	}
-	return geolocations[:constants.SimulatedDevices], nil
+	upperBound := min(len(geolocations), constants.SimulatedDevices)
+	return geolocations[:upperBound], nil
 }
