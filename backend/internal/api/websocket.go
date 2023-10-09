@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 	"net/http"
-	"sync"
 
 	"github.com/NinjaPerson24119/MapProject/backend/internal/database"
 	"github.com/gin-gonic/gin"
@@ -38,47 +37,12 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 			return
 		}
 		defer ws.Close()
-		// it is safe to have one reader and one writer concurrently
-		muWriter := sync.Mutex{}
 
-		// ping pong
-		go func() {
-			for {
-				// this blocks until a message is received
-				msgType, bytes, err := ws.ReadMessage()
-				if err != nil {
-					isClosed := handleCloseError(err, "reading ping from websocket")
-					if isClosed {
-						return
-					}
-					continue
-				}
-				if msgType != websocket.TextMessage {
-					continue
-				}
-				if string(bytes) == "ping" {
-					muWriter.Lock()
-					err = ws.WriteMessage(websocket.TextMessage, []byte("pong"))
-					muWriter.Unlock()
-					if err != nil {
-						isClosed := handleCloseError(err, "writing pong to websocket")
-						if isClosed {
-							return
-						}
-						continue
-					}
-				}
-			}
-		}()
-
-		// relay geolocation inserts
 		err = repo.ListenToGeolocationInserted(c.Request.Context(), func(geolocation *database.DeviceGeolocation) error {
 			json := GeolocationsWebSocketMessage{
 				Geolocations: []*database.DeviceGeolocation{geolocation},
 			}
-			muWriter.Lock()
 			err = ws.WriteJSON(json)
-			muWriter.Unlock()
 			if err != nil {
 				closed := handleCloseError(err, "writing geolocation to websocket")
 				if closed {
