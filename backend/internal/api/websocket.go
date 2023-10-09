@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/NinjaPerson24119/MapProject/backend/internal/database"
@@ -31,6 +32,8 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 			return
 		}
 		defer ws.Close()
+		var wsClosed atomic.Bool
+		wsClosed.Store(false)
 
 		// it is safe to have one reader and one writer concurrently
 		muWriter := sync.Mutex{}
@@ -71,6 +74,7 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 					}
 				}
 			}
+			wsClosed.Store(true)
 		}()
 		go func() {
 			for {
@@ -85,6 +89,7 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 				}
 				time.Sleep(pingPeriod)
 			}
+			wsClosed.Store(true)
 		}()
 
 		// begin connection by sending all geolocations
@@ -106,19 +111,15 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 		}
 
 		// listen to updates and send new geolocations as they occur
-		err = repo.ListenToGeolocationInserted(c.Request.Context(), func(geolocation *database.DeviceGeolocation) error {
-			json := GeolocationsWebSocketMessage{
-				Geolocations: []*database.DeviceGeolocation{geolocation},
-			}
+		muFlaggedDeviceIDs := sync.Mutex{}
+		flaggedDeviceIDs := map[string]bool{}
+		err = repo.ListenToGeolocationInserted(c.Request.Context(), func(deviceID string) error {
+			muFlaggedDeviceIDs.Lock()
+			flaggedDeviceIDs[deviceID] = true
+			muFlaggedDeviceIDs.Unlock()
 
-			muWriter.Lock()
-			ws.SetWriteDeadline(time.Now().Add(writeWait))
-			err = ws.WriteJSON(json)
-			muWriter.Unlock()
-
-			if err != nil {
-				fmt.Printf("error writing json to websocket: %v\n", err)
-				return err
+			if wsClosed.Load() {
+				return fmt.Errorf("websocket closed while handling geolocation inserted")
 			}
 			return nil
 		})
@@ -126,6 +127,59 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 			fmt.Printf("error listening to geolocation inserted: %v\n", err)
 			return
 		}
+
+		bufferSize := 10
+		bufferPeriod := time.Second / 2
+		timeAtLastSend := time.Now()
+		go func() {
+			for {
+				if wsClosed.Load() {
+					fmt.Print("websocket closed while processing flagged geolocations")
+					return
+				}
+
+				// wait until there are enough flagged geolocations or enough time has passed
+				muFlaggedDeviceIDs.Lock()
+				if len(flaggedDeviceIDs) < bufferSize && time.Since(timeAtLastSend) < bufferPeriod {
+					muFlaggedDeviceIDs.Unlock()
+					continue
+				}
+				muFlaggedDeviceIDs.Unlock()
+
+				// get flagged geolocations as a list of IDs, then clear the flag
+				geolocationIDs := []string{}
+				muFlaggedDeviceIDs.Lock()
+				for k, v := range flaggedDeviceIDs {
+					if v {
+						geolocationIDs = append(geolocationIDs, k)
+					}
+				}
+				flaggedDeviceIDs = map[string]bool{}
+				muFlaggedDeviceIDs.Unlock()
+
+				// get flagged geolocations from the database
+				geolocations, err := repo.GetMultiLatestGeolocations(c.Request.Context(), geolocationIDs)
+				if err != nil {
+					fmt.Printf("error getting flagged geolocations: %v\n", err)
+					return
+				}
+
+				// send flagged geolocations to the websocket
+				muWriter.Lock()
+				ws.SetWriteDeadline(time.Now().Add(writeWait))
+				json := GeolocationsWebSocketMessage{
+					Geolocations: geolocations,
+				}
+				err = ws.WriteJSON(json)
+				muWriter.Unlock()
+				if err != nil {
+					fmt.Printf("error writing json to websocket: %v\n", err)
+					return
+				}
+				timeAtLastSend = time.Now()
+				fmt.Printf("sent %v geolocations to websocket\n", len(geolocations))
+			}
+		}()
 	}
 }
 
@@ -133,7 +187,7 @@ func getLatestGeolocations(ctx context.Context, repo database.Repo) ([]*database
 	geolocations := []*database.DeviceGeolocation{}
 	page := 1
 	for {
-		geolocationsPage, err := repo.GetLatestGeolocations(ctx, filters.PageOptions{
+		geolocationsPage, err := repo.ListLatestGeolocations(ctx, filters.PageOptions{
 			Page:     page,
 			PageSize: 100,
 		})

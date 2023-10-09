@@ -20,12 +20,20 @@ type GetDevicesResponse struct {
 	Devices []*database.Device `json:"devices"`
 }
 
-type GetLatestGeolocationsRequest struct {
+type ListLatestGeolocationsRequest struct {
 	Paging filters.PageOptions `json:"paging"`
 	// TODO: maybe add filters later by (lat,lng) and radius
 }
 
-type GetLatestGeolocationsResponse struct {
+type ListLatestGeolocationsResponse struct {
+	Geolocations []*database.DeviceGeolocation `json:"geolocations"`
+}
+
+type GetMultiLatestGeolocationsRequest struct {
+	DeviceIDs []string `json:"device_ids"`
+}
+
+type GetMultiLatestGeolocationsResponse struct {
 	Geolocations []*database.DeviceGeolocation `json:"geolocations"`
 }
 
@@ -105,22 +113,25 @@ func RouterWithGeolocationAPI(router *gin.Engine, repo database.Repo) {
 		c.Status(http.StatusCreated)
 	})
 
-	router.POST("/geolocation/:deviceID", func(c *gin.Context) {
-		deviceID := c.Param("deviceID")
-		geolocation, err := repo.GetLatestGeolocation(c.Request.Context(), deviceID)
+	router.POST("/geolocation/getMulti", func(c *gin.Context) {
+		var request GetMultiLatestGeolocationsRequest
+		if err := c.ShouldBindJSON(&request); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		geolocation, err := repo.GetMultiLatestGeolocations(c.Request.Context(), request.DeviceIDs)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		if geolocation == nil {
-			c.Status(http.StatusNotFound)
-			return
+		resp := GetMultiLatestGeolocationsResponse{
+			Geolocations: geolocation,
 		}
-		c.JSON(http.StatusOK, geolocation)
+		c.JSON(http.StatusOK, resp)
 	})
 
 	router.POST("/geolocation/list", func(c *gin.Context) {
-		var request GetLatestGeolocationsRequest
+		var request ListLatestGeolocationsRequest
 		if err := c.ShouldBindJSON(&request); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
@@ -130,7 +141,7 @@ func RouterWithGeolocationAPI(router *gin.Engine, repo database.Repo) {
 			return
 		}
 
-		geolocations, err := repo.GetLatestGeolocations(c.Request.Context(), request.Paging)
+		geolocations, err := repo.ListLatestGeolocations(c.Request.Context(), request.Paging)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -139,7 +150,7 @@ func RouterWithGeolocationAPI(router *gin.Engine, repo database.Repo) {
 		if len(geolocations) == 0 {
 			geolocations = []*database.DeviceGeolocation{}
 		}
-		resp := GetLatestGeolocationsResponse{
+		resp := ListLatestGeolocationsResponse{
 			Geolocations: geolocations,
 		}
 		c.JSON(http.StatusOK, resp)

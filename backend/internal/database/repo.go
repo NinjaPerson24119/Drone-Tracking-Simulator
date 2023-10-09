@@ -15,7 +15,8 @@ const (
 
 type RepoImpl struct {
 	// this resource is thread safe
-	pool *pgxpool.Pool
+	pool          *pgxpool.Pool
+	connectionURL string
 }
 
 func New(ctx context.Context, connectionURL string) (*RepoImpl, error) {
@@ -31,7 +32,8 @@ func New(ctx context.Context, connectionURL string) (*RepoImpl, error) {
 	}
 
 	return &RepoImpl{
-		pool: pool,
+		pool:          pool,
+		connectionURL: connectionURL,
 	}, nil
 }
 
@@ -108,7 +110,7 @@ func (s *RepoImpl) InsertGeolocation(ctx context.Context, geolocation *DeviceGeo
 	return nil
 }
 
-func (s *RepoImpl) GetLatestGeolocations(ctx context.Context, paging filters.PageOptions) ([]*DeviceGeolocation, error) {
+func (s *RepoImpl) ListLatestGeolocations(ctx context.Context, paging filters.PageOptions) ([]*DeviceGeolocation, error) {
 	if paging.Page < 1 || paging.PageSize < 1 || paging.PageSize > 1000 {
 		return nil, fmt.Errorf("repo: invalid page or pageSize")
 	}
@@ -148,22 +150,23 @@ func (s *RepoImpl) GetLatestGeolocations(ctx context.Context, paging filters.Pag
 	return ptrs, nil
 }
 
-func (s *RepoImpl) GetLatestGeolocation(ctx context.Context, deviceID string) (*DeviceGeolocation, error) {
+func (s *RepoImpl) GetMultiLatestGeolocations(ctx context.Context, deviceIDs []string) ([]*DeviceGeolocation, error) {
 	query := `
-		SELECT d.device_id, d.event_time, d.latitude, d.longitude, d.created, d.updated, d.deleted
-		FROM device.geolocation AS d
-		INNER JOIN (
-			SELECT device_id, MAX(event_time) AS max_event_time
-			FROM device.geolocation
-			WHERE device_id = @deviceID AND deleted IS NULL
-			GROUP BY device_id
-		) m ON m.max_event_time = d.event_time AND m.device_id = d.device_id
-		WHERE d.device_id = @deviceID AND d.deleted IS NULL
-		ORDER BY device_id DESC
-		LIMIT 1;
-	`
+	SELECT d.device_id, d.event_time, d.latitude, d.longitude, d.created, d.updated, d.deleted
+	FROM device.geolocation AS d
+	INNER JOIN (
+		SELECT device_id, MAX(event_time) AS max_event_time
+		FROM device.geolocation
+		WHERE device_id = ANY(@deviceIDs) AND deleted IS NULL
+		GROUP BY device_id
+	) m ON m.max_event_time = d.event_time AND m.device_id = d.device_id
+	WHERE d.device_id = ANY(@deviceIDs) AND d.deleted IS NULL
+	ORDER BY device_id DESC
+	LIMIT @lim;
+`
 	args := pgx.NamedArgs{
-		"deviceID": deviceID,
+		"deviceIDs": deviceIDs,
+		"lim":       len(deviceIDs),
 	}
 	rows, err := s.pool.Query(ctx, query, args)
 	if err != nil {
@@ -175,19 +178,27 @@ func (s *RepoImpl) GetLatestGeolocation(ctx context.Context, deviceID string) (*
 	if err != nil {
 		return nil, fmt.Errorf("failed to collect latest geolocations: %v", err)
 	}
-	if len(geolocations) == 0 {
-		return nil, nil
-	}
 
-	return &geolocations[0], nil
+	// get multi returns the same order as the input. if a device is not found, it will be nil
+	geolocationsMap := map[string]*DeviceGeolocation{}
+	for _, g := range geolocations {
+		geolocationsMap[g.DeviceID] = &g
+	}
+	ptrs := make([]*DeviceGeolocation, len(deviceIDs))
+	for i := range deviceIDs {
+		ptrs[i] = geolocationsMap[deviceIDs[i]]
+	}
+	return ptrs, nil
 }
 
-func (s *RepoImpl) ListenToGeolocationInserted(ctx context.Context, handler func(*DeviceGeolocation) error) error {
-	conn, err := s.pool.Acquire(ctx)
+func (s *RepoImpl) ListenToGeolocationInserted(ctx context.Context, handler func(string) error) error {
+	// connect directly without pool to avoid competing with other connections
+	// TODO: this could really be a single connection for the entire app which multicasts to all listeners
+	conn, err := pgx.Connect(ctx, s.connectionURL)
 	if err != nil {
 		return fmt.Errorf("failed to acquire connection: %v", err)
 	}
-	defer conn.Release()
+	defer conn.Close(ctx)
 
 	_, err = conn.Exec(ctx, fmt.Sprintf("LISTEN %s;", deviceGeolocationInsertedNotificationChannel))
 	if err != nil {
@@ -195,20 +206,13 @@ func (s *RepoImpl) ListenToGeolocationInserted(ctx context.Context, handler func
 	}
 
 	for {
-		notification, err := conn.Conn().WaitForNotification(ctx)
+		notification, err := conn.WaitForNotification(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to wait for notification: %v", err)
 		}
 
-		deviceGeolocation, err := s.GetLatestGeolocation(ctx, notification.Payload)
-		if err != nil {
-			return fmt.Errorf("failed to get latest geolocation: %v", err)
-		}
-		if deviceGeolocation == nil {
-			return fmt.Errorf("failed to get latest geolocation: not found")
-		}
-
-		err = handler(deviceGeolocation)
+		deviceID := notification.Payload
+		err = handler(deviceID)
 		if err != nil {
 			return fmt.Errorf("failed to handle notification: %v", err)
 		}
