@@ -5,7 +5,7 @@ import styles from './page.module.css'
 import mapboxgl from 'mapbox-gl';
 import { Feature, Geometry, GeoJsonProperties } from 'geojson';
 
-const geolocationStreamAPI = 'wss://map-project-backend.onrender.com/geolocation/stream';
+const geolocationStreamAPI = process.env.NEXT_PUBLIC_WEBSOCKET || '';
 
 interface GeolocationMessage {
   geolocations: Geolocation[];
@@ -116,6 +116,7 @@ export default function Home() {
           }
           return value;
         });
+        console.log('Received geolocations');
         for (const geolocation of json.geolocations) {
           const lastGeolocation = geolocations.get(geolocation.device_id);
           if (!lastGeolocation) {
@@ -129,7 +130,6 @@ export default function Home() {
           }
           // update geolocation
           geolocations.set(geolocation.device_id, geolocation);
-          console.log("Updated Geolocation");
         }
         setGeolocations(new Map(geolocations));
       } catch (error) {
