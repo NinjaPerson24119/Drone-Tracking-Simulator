@@ -11,7 +11,7 @@ import (
 
 const (
 	deviceGeolocationInsertedNotificationChannel = "geolocation_inserted"
-	insertGeolocationQuery					   = `
+	insertGeolocationQuery                       = `
 		INSERT INTO device.geolocation (device_id, event_time, latitude ,longitude)
 		VALUES (@device_id, @event_time, @latitude, @longitude);
 	`
@@ -126,7 +126,7 @@ func (s *RepoImpl) InsertMultiGeolocation(ctx context.Context, geolocations []*D
 		batch.Queue(insertGeolocationQuery, args)
 	}
 	br := tx.SendBatch(ctx, batch)
-	
+
 	err = br.Close()
 	if err != nil {
 		return fmt.Errorf("failed to insert multi geolocation: %v", err)
@@ -139,8 +139,6 @@ func (s *RepoImpl) InsertMultiGeolocation(ctx context.Context, geolocations []*D
 
 	return nil
 }
-
-func 
 
 func (s *RepoImpl) ListLatestGeolocations(ctx context.Context, paging filters.PageOptions) ([]*DeviceGeolocation, error) {
 	if paging.Page < 1 || paging.PageSize < 1 || paging.PageSize > 1000 {
