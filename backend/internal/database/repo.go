@@ -11,6 +11,10 @@ import (
 
 const (
 	deviceGeolocationInsertedNotificationChannel = "geolocation_inserted"
+	insertGeolocationQuery					   = `
+		INSERT INTO device.geolocation (device_id, event_time, latitude ,longitude)
+		VALUES (@device_id, @event_time, @latitude, @longitude);
+	`
 )
 
 type RepoImpl struct {
@@ -92,23 +96,51 @@ func (s *RepoImpl) ListDevices(ctx context.Context, paging filters.PageOptions) 
 	return ptrs, nil
 }
 
-func (s *RepoImpl) InsertGeolocation(ctx context.Context, geolocation *DeviceGeolocation) error {
-	query := `
-		INSERT INTO device.geolocation (device_id, event_time, latitude ,longitude)
-		VALUES (@device_id, @event_time, @latitude, @longitude);
-	`
-	args := pgx.NamedArgs{
+func insertGeolocationNamedArgs(geolocation *DeviceGeolocation) pgx.NamedArgs {
+	return pgx.NamedArgs{
 		"device_id":  geolocation.DeviceID,
 		"event_time": geolocation.EventTime,
 		"latitude":   geolocation.Latitude,
 		"longitude":  geolocation.Longitude,
 	}
-	_, err := s.pool.Exec(ctx, query, args)
+}
+
+func (s *RepoImpl) InsertGeolocation(ctx context.Context, geolocation *DeviceGeolocation) error {
+	args := insertGeolocationNamedArgs(geolocation)
+	_, err := s.pool.Exec(ctx, insertGeolocationQuery, args)
 	if err != nil {
 		return fmt.Errorf("failed to insert geolocation: %v", err)
 	}
 	return nil
 }
+
+func (s *RepoImpl) InsertMultiGeolocation(ctx context.Context, geolocations []*DeviceGeolocation) error {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+
+	batch := &pgx.Batch{}
+	for _, geolocation := range geolocations {
+		args := insertGeolocationNamedArgs(geolocation)
+		batch.Queue(insertGeolocationQuery, args)
+	}
+	br := tx.SendBatch(ctx, batch)
+	
+	err = br.Close()
+	if err != nil {
+		return fmt.Errorf("failed to insert multi geolocation: %v", err)
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func 
 
 func (s *RepoImpl) ListLatestGeolocations(ctx context.Context, paging filters.PageOptions) ([]*DeviceGeolocation, error) {
 	if paging.Page < 1 || paging.PageSize < 1 || paging.PageSize > 1000 {

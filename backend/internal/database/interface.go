@@ -11,6 +11,7 @@ type Repo interface {
 	InsertDevice(ctx context.Context, device *Device) (string, error)
 	ListDevices(ctx context.Context, paging filters.PageOptions) ([]*Device, error)
 	InsertGeolocation(ctx context.Context, geolocation *DeviceGeolocation) error
+	InsertMultiGeolocation(ctx context.Context, geolocations []*DeviceGeolocation) error
 	ListLatestGeolocations(ctx context.Context, paging filters.PageOptions) ([]*DeviceGeolocation, error)
 	GetMultiLatestGeolocations(ctx context.Context, deviceIDs []string) ([]*DeviceGeolocation, error)
 	ListenToGeolocationInserted(ctx context.Context, handler func(string) error) error

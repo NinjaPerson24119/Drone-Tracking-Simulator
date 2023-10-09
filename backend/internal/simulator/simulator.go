@@ -128,50 +128,48 @@ func (s *SimulatorImpl) setupDevices(ctx context.Context) error {
 }
 
 func (s *SimulatorImpl) stepDevices(ctx context.Context) error {
+	// previously, I implemented a single transaction for each device's insert
+	// this wasn't slow per say, but hit the GCP IOPS limit
+	// which I didn't want to pay to increase, so I'm batching the inserts now
+	//
+	// although it would be a better simulation to insert each device's geolocation separately
+	// since this is the behavior one would expect from payloads coming from separate tracking devices
+
+	geolocationsToInsert := []*database.DeviceGeolocation{}
 	for _, device := range s.simulatedDevices {
 		device.geolocation.EventTime = time.Now()
 
 		deltaSeconds := time.Since(device.lastUpdate).Seconds()
 		device.geolocation.Latitude += deltaSeconds * device.stepDisplacementY
 		device.geolocation.Longitude += deltaSeconds * device.stepDisplacementX
-		//fmt.Printf("displacement: %f, %f\n", device.stepDisplacementX, device.stepDisplacementY)
 
 		// switch direction if we're outside the circle
 		distanceSquaredFromCenter := math.Pow(device.geolocation.Latitude-s.centerLatitude, 2) + math.Pow(device.geolocation.Longitude-s.centerLongitude, 2)
 		if distanceSquaredFromCenter > math.Pow(s.radius, 2) && device.switchDirectionCooldownSteps <= 0 {
-			//fmt.Printf("switching direction\n")
 			device.stepDisplacementX *= -1
 			device.stepDisplacementY *= -1
 			device.switchDirectionCooldownSteps = 5
 		}
 		device.switchDirectionCooldownSteps--
 
-		// NOTE: this would be more efficient if we batched the inserts
-		// However, we can't batch real inserts, so we shouldn't batch simulated inserts
-		// We want this to model the insertion pattern of real devices
-		//
-		// We want to update the devices at roughly the same time, so we don't want to wait
-		// for the insert to complete before starting the next one
-		//
-		// TODO: this needs to execute from a buffer and thread pool to avoid OOM if the DB is too slow
-		go func(d *SimulatedDevice) {
-			retries := 0
-			var err error
-			for retries < s.maxInsertRetries {
-				err := s.repo.InsertGeolocation(ctx, d.geolocation)
-				if err == nil {
-					break
-				}
-				retries++
-				time.Sleep(s.insertRetryTime)
-			}
-			if retries > s.maxInsertRetries {
-				fmt.Printf("Failed to insert geolocation after %d retries: %v\n", retries, err)
-				return
-			}
-		}(device)
-
+		geolocationsToInsert = append(geolocationsToInsert, device.geolocation)
 		device.lastUpdate = time.Now()
 	}
+
+	retries := 0
+	var err error
+	for retries < s.maxInsertRetries {
+		err := s.repo.InsertMultiGeolocation(ctx, geolocationsToInsert)
+		if err == nil {
+			break
+		}
+		retries++
+		time.Sleep(s.insertRetryTime)
+	}
+	if retries > s.maxInsertRetries {
+		fmt.Printf("Failed to insert geolocations after %d retries: %v\n", retries, err)
+		return err
+	}
+
 	return nil
 }

@@ -3,7 +3,7 @@
 - Displays a map with drone locations in realtime.
 - Drone locations are simulated by a backend service that moves them on a linear path defined by a starting point, radius to turn around at, and an angle.
 - Zooming out the map will group drones together if they are within a certain distance of each other.
-- Clicking on a drone will expand the group and show all drones within the group. Changing the zoom will re-expand all groups.
+- Clicking on a drone will zoom in until the group is expanded
 
 [Check it out here!](https://map-project-r2zv.onrender.com)
 TODO: screenshot
