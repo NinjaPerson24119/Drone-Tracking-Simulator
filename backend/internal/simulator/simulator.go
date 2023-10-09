@@ -16,6 +16,7 @@ type SimulatedDevice struct {
 	geolocation       *database.DeviceGeolocation
 	stepDisplacementX float64
 	stepDisplacementY float64
+	lastUpdate        time.Time
 }
 
 type SimulatorImpl struct {
@@ -28,15 +29,15 @@ type SimulatorImpl struct {
 	centerLongitude float64
 	radius          float64
 	frequency       int
-	sleepTime       time.Duration
+	sleepTimeMs     time.Duration
 	movementPerSec  float64
 
-	maxRetries int
-	retryTime  time.Duration
+	maxRetries  int
+	retryTimeMs time.Duration
 }
 
 func New(repo database.Repo, noDevices int, centerLatitude float64, centerLongitude float64, radius float64, frequency int, movementPerSec float64) *SimulatorImpl {
-	sleepTime := time.Duration(1000/frequency) * time.Millisecond
+	sleepTimeMs := time.Duration(1000/frequency) * time.Millisecond
 	return &SimulatorImpl{
 		repo:            repo,
 		noDevices:       noDevices,
@@ -44,10 +45,10 @@ func New(repo database.Repo, noDevices int, centerLatitude float64, centerLongit
 		centerLongitude: centerLongitude,
 		radius:          radius,
 		frequency:       frequency,
-		sleepTime:       sleepTime,
+		sleepTimeMs:     sleepTimeMs,
 		movementPerSec:  movementPerSec,
 		maxRetries:      5,
-		retryTime:       sleepTime / 5,
+		retryTimeMs:     sleepTimeMs / 5,
 	}
 }
 
@@ -74,12 +75,9 @@ func (s *SimulatorImpl) Run(ctx context.Context) error {
 					fmt.Printf("Simulator died after %d retries. Error stepping devices: %v\n", retries, err)
 					return err
 				}
-				time.Sleep(s.retryTime)
+				time.Sleep(s.retryTimeMs)
 			}
-			// this isn't an exact science. as long as the devices update continuously, we're good
-			// - don't want to compute deltas
-			// - don't want to factor retry times into the sleep time
-			time.Sleep(s.sleepTime)
+			time.Sleep(s.sleepTimeMs)
 		}
 	}
 }
@@ -126,6 +124,7 @@ func (s *SimulatorImpl) setupDevices(ctx context.Context) error {
 			// this isn't normalized, so it's not truly stepDistance units per second, but close enough
 			stepDisplacementY: stepDistance * math.Sin(directionRadians),
 			stepDisplacementX: stepDistance * math.Cos(directionRadians),
+			lastUpdate:        time.Now(),
 		})
 	}
 	return nil
@@ -135,8 +134,9 @@ func (s *SimulatorImpl) stepDevices(ctx context.Context) error {
 	for _, device := range s.simulatedDevices {
 		device.geolocation.EventTime = time.Now()
 
-		device.geolocation.Latitude += device.stepDisplacementY
-		device.geolocation.Longitude += device.stepDisplacementX
+		deltaSeconds := time.Since(device.lastUpdate).Seconds()
+		device.geolocation.Latitude += deltaSeconds * device.stepDisplacementY
+		device.geolocation.Longitude += deltaSeconds * device.stepDisplacementX
 
 		// switch direction if we're outside the circle
 		distanceSquaredFromCenter := math.Pow(device.geolocation.Latitude-s.centerLatitude, 2) + math.Pow(device.geolocation.Longitude-s.centerLongitude, 2)
@@ -152,6 +152,8 @@ func (s *SimulatorImpl) stepDevices(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+
+		device.lastUpdate = time.Now()
 	}
 	return nil
 }
