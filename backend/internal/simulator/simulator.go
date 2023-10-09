@@ -12,9 +12,10 @@ import (
 )
 
 type SimulatedDevice struct {
-	device           *database.Device
-	geolocation      *database.DeviceGeolocation
-	directionRadians float64
+	device            *database.Device
+	geolocation       *database.DeviceGeolocation
+	stepDisplacementX float64
+	stepDisplacementY float64
 }
 
 type SimulatorImpl struct {
@@ -109,8 +110,8 @@ func (s *SimulatorImpl) setupDevices(ctx context.Context) error {
 	}
 
 	// pick random starting locations and directions
+	stepDistance := s.movementPerSec * (1.0 / float64(s.frequency))
 	for _, device := range devices {
-		directionRadians := 2 * math.Pi * rand.Float64()
 		deviceGeolocation := &database.DeviceGeolocation{
 			DeviceID:  device.DeviceID,
 			EventTime: time.Now(),
@@ -118,27 +119,29 @@ func (s *SimulatorImpl) setupDevices(ctx context.Context) error {
 			Longitude: s.centerLongitude + s.radius/2*(rand.Float64()-0.5)*2,
 		}
 
+		directionRadians := 2 * math.Pi * rand.Float64()
 		s.simulatedDevices = append(s.simulatedDevices, &SimulatedDevice{
-			device:           device,
-			geolocation:      deviceGeolocation,
-			directionRadians: directionRadians,
+			device:            device,
+			geolocation:       deviceGeolocation,
+			stepDisplacementY: stepDistance * math.Sin(directionRadians),
+			stepDisplacementX: stepDistance * math.Cos(directionRadians),
 		})
 	}
-
 	return nil
 }
 
 func (s *SimulatorImpl) stepDevices(ctx context.Context) error {
-	distance := s.movementPerSec * (1.0 / float64(s.frequency))
 	for _, device := range s.simulatedDevices {
 		device.geolocation.EventTime = time.Now()
-		device.geolocation.Latitude += distance * math.Sin(device.directionRadians)
-		device.geolocation.Longitude += distance * math.Cos(device.directionRadians)
+
+		device.geolocation.Latitude += device.stepDisplacementY
+		device.geolocation.Longitude += device.stepDisplacementX
 
 		// switch direction if we're outside the circle
 		distanceSquaredFromCenter := math.Pow(device.geolocation.Latitude-s.centerLatitude, 2) + math.Pow(device.geolocation.Longitude-s.centerLongitude, 2)
 		if distanceSquaredFromCenter > math.Pow(s.radius, 2) {
-			device.directionRadians += math.Pi
+			device.stepDisplacementX *= -1
+			device.stepDisplacementY *= -1
 		}
 
 		err := s.repo.InsertGeolocation(ctx, device.geolocation)
