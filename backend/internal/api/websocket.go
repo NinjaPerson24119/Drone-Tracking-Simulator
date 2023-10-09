@@ -77,6 +77,7 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 					}
 				}
 			}
+			fmt.Print("propagated close over atomic bool")
 			wsClosed.Store(true)
 		}()
 		go func() {
