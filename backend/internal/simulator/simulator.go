@@ -104,7 +104,6 @@ func (s *SimulatorImpl) setupDevices(ctx context.Context) error {
 	}
 
 	// pick random starting locations and directions
-	stepDistance := s.movementPerSec * s.sleepTime.Seconds()
 	for _, device := range devices {
 		deviceGeolocation := &database.DeviceGeolocation{
 			DeviceID:  device.DeviceID,
@@ -118,8 +117,8 @@ func (s *SimulatorImpl) setupDevices(ctx context.Context) error {
 			device:      device,
 			geolocation: deviceGeolocation,
 			// this isn't normalized, so it's not truly stepDistance units per second, but close enough
-			stepDisplacementY: stepDistance * math.Sin(directionRadians),
-			stepDisplacementX: stepDistance * math.Cos(directionRadians),
+			stepDisplacementY: s.movementPerSec * math.Sin(directionRadians),
+			stepDisplacementX: s.movementPerSec * math.Cos(directionRadians),
 			lastUpdate:        time.Now(),
 		})
 	}

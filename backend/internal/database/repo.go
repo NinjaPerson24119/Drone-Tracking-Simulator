@@ -181,8 +181,8 @@ func (s *RepoImpl) GetMultiLatestGeolocations(ctx context.Context, deviceIDs []s
 
 	// get multi returns the same order as the input. if a device is not found, it will be nil
 	geolocationsMap := map[string]*DeviceGeolocation{}
-	for _, g := range geolocations {
-		geolocationsMap[g.DeviceID] = &g
+	for i := range geolocations {
+		geolocationsMap[geolocations[i].DeviceID] = &geolocations[i]
 	}
 	ptrs := make([]*DeviceGeolocation, len(deviceIDs))
 	for i := range deviceIDs {
