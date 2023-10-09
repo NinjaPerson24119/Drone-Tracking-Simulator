@@ -145,12 +145,21 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 					fmt.Printf("error getting flagged geolocations: %v\n", err)
 					return
 				}
+				// not found geolocations will be returned from GetMulti as nil
+				geolocationsWithoutNil := []*database.DeviceGeolocation{}
+				for _, g := range geolocations {
+					if g != nil {
+						geolocationsWithoutNil = append(geolocationsWithoutNil, g)
+					} else {
+						fmt.Printf("geolocation not found after notification: %v\n", g)
+					}
+				}
 
 				// send flagged geolocations to the websocket
 				muWriter.Lock()
 				ws.SetWriteDeadline(time.Now().Add(writeWait))
 				json := GeolocationsWebSocketMessage{
-					Geolocations: geolocations,
+					Geolocations: geolocationsWithoutNil,
 				}
 				err = ws.WriteJSON(json)
 				muWriter.Unlock()
