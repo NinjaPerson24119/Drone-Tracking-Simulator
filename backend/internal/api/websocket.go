@@ -47,15 +47,28 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 		go func() {
 			ws.SetReadDeadline(time.Now().Add(pongWait))
 			ws.SetPongHandler(func(string) error {
-				fmt.Print("pong\n")
 				ws.SetReadDeadline(time.Now().Add(pongWait))
 				return nil
 			})
 			for {
-				if _, _, err := ws.NextReader(); err != nil {
-					fmt.Printf("error reading next reader from websocket: %v\n", err)
+				messageType, bytes, err := ws.ReadMessage()
+				if err != nil {
+					fmt.Printf("error reading from websocket: %v\n", err)
 					ws.Close()
 					break
+				}
+				if messageType == websocket.TextMessage {
+					if string(bytes) == "ping" {
+						fmt.Print("ping\n")
+						ws.SetReadDeadline(time.Now().Add(pongWait))
+						muWriter.Lock()
+						err := ws.WriteMessage(websocket.PongMessage, nil)
+						if err != nil {
+							fmt.Printf("error writing user-level pong message to websocket: %v\n", err)
+							break
+						}
+						muWriter.Unlock()
+					}
 				}
 			}
 		}()
