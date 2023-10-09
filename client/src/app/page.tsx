@@ -39,7 +39,6 @@ export default function Home() {
   const [mapStyleLoaded, setMapStyleLoaded] = useState<boolean>(false);
   const [socketShouldReconnect, setSocketShouldReconnect] = useState<boolean>(true);
   const [lastPing, setLastPing] = useState<Date | null>(null);
-  const [lastPong, setLastPong] = useState<Date | null>(null);
   const socket = useRef<WebSocket | null>(null);
 
   const mapContainer = useRef<HTMLDivElement | null>(null);
@@ -90,40 +89,49 @@ export default function Home() {
     console.log('Connecting to WebSocket...')
 
     const ws = new WebSocket(geolocationStreamAPI);
+    const sendPing = () => {
+      ws.send('ping');
+      setLastPing(new Date());
+      console.log('ping');
+    }
+    
     ws.addEventListener('open', () => {
       console.log('WebSocket connection established.');
     });
     ws.addEventListener('close', () => {
       console.log('WebSocket connection closed.');
+      resetConnection();
     });
     ws.addEventListener('error', (error) => {
       console.error('WebSocket error:', error);
+      resetConnection();
     });
     ws.addEventListener('message', (event) => {
-      if (event.data === 'pong') {
-        setLastPong(new Date());
-        console.log('pong');
-        return;
-      }
-
       try {
+        console.log('got geo');
         const json: GeolocationMessage = JSON.parse(event.data, (key, value) => {
           if (key === 'event_time' && typeof value === 'string') {
             return new Date(value);
           }
           return value;
         });
+        console.log(json);
         for (const geolocation of json.geolocations) {
           const lastGeolocation = geolocations.get(geolocation.device_id);
+          console.log('lastGeolocation');
           if (!lastGeolocation) {
             // new geolocation
+            console.log('new geolocation')
             geolocations.set(geolocation.device_id, geolocation);
             continue;
           }
           if (lastGeolocation.event_time > geolocation.event_time) {
             // stale geolocation
+            console.log('stale geolocation')
             continue;
           }
+          // update geolocation
+          console.log('update geolocation')
           geolocations.set(geolocation.device_id, geolocation);
         }
         setGeolocations(new Map(geolocations));
@@ -134,27 +142,32 @@ export default function Home() {
 
     // call socket on an interval and reconnect if needed
     const intervalId = setInterval(() => {
-      const resetConnection = () => {
-        console.log('WebSocket connection lost.');
-        ws.close();
-        socket.current = null;
-        setSocketShouldReconnect(true);
-        clearInterval(intervalId);
-      }
-      if (ws.readyState === 1) {
-        if (lastPing && lastPong && lastPing > lastPong) {
-          console.log('Ping timeout.');
-          resetConnection();
-          return;
-        }
-        ws.send('ping');
-        setLastPing(new Date());
-        console.log('ping');
-      } else {
-        resetConnection();
-      }
+      ws.dispatchEvent(new Event('checkPing'));
     }, 5000);
     setSocketShouldReconnect(false);
+    const resetConnection = () => {
+      console.log('WebSocket connection lost.');
+      ws.close();
+      socket.current = null;
+      setSocketShouldReconnect(true);
+      clearInterval(intervalId);
+    }
+    ws.addEventListener('checkPing', () => {
+      if (ws.readyState !== 1) {
+        console.log('WebSocket not ready.');
+        return;
+      }
+      if (!lastPing) {
+        sendPing();
+        return;
+      }
+      const pingElapsed = new Date().getTime() - lastPing.getTime();
+      if (pingElapsed > 5000) {
+        console.log('Ping timeout.');
+        resetConnection();
+        return;
+      }
+    });
 
     socket.current = ws;
     return () => {
