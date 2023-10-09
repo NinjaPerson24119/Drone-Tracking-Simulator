@@ -121,7 +121,6 @@ func (s *SimulatorImpl) setupDevices(ctx context.Context) error {
 }
 
 func (s *SimulatorImpl) stepDevices(ctx context.Context) error {
-	loopBefore := time.Now()
 	for _, device := range s.simulatedDevices {
 		device.geolocation.EventTime = time.Now()
 
@@ -158,7 +157,5 @@ func (s *SimulatorImpl) stepDevices(ctx context.Context) error {
 
 		device.lastUpdate = time.Now()
 	}
-	loopAfter := time.Now()
-	fmt.Printf("Stepped %d devices in %v\n", len(s.simulatedDevices), loopAfter.Sub(loopBefore))
 	return nil
 }
