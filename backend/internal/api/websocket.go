@@ -99,6 +99,7 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 			muFlaggedDeviceIDs.Lock()
 			flaggedDeviceIDs[deviceID] = true
 			muFlaggedDeviceIDs.Unlock()
+			fmt.Printf("flagged geolocation inserted: %v\n", deviceID)
 
 			if wsClosed.Load() {
 				return fmt.Errorf("websocket closed while handling geolocation inserted")
@@ -113,6 +114,7 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 		bufferSize := 10
 		bufferPeriod := time.Second / 2
 		timeAtLastSend := time.Now()
+		checkPeriod := time.Millisecond * 10
 		go func() {
 			for {
 				if wsClosed.Load() {
@@ -169,6 +171,9 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 				}
 				timeAtLastSend = time.Now()
 				fmt.Printf("sent %v geolocations to websocket\n", len(geolocations))
+
+				// avoid hammering the locks
+				time.Sleep(checkPeriod)
 			}
 		}()
 
@@ -188,6 +193,14 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 		if err != nil {
 			fmt.Printf("error writing json to websocket: %v\n", err)
 			return
+		}
+
+		// wait for websocket to close
+		for {
+			if wsClosed.Load() {
+				return
+			}
+			time.Sleep(time.Second)
 		}
 	}
 }
