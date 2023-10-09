@@ -44,7 +44,7 @@ func New(repo database.Repo, noDevices int, centerLatitude float64, centerLongit
 		centerLongitude:   centerLongitude,
 		radius:            radius,
 		frequency:         frequency,
-		sleepTimeMs:       time.Duration(1.0 / frequency * float64(time.Millisecond)),
+		sleepTimeMs:       time.Duration(1.0 / frequency * float64(time.Second)),
 		movementPerSec:    movementPerSec,
 		maxInsertRetries:  5,
 		insertRetryTimeMs: time.Duration(2 * time.Millisecond),
