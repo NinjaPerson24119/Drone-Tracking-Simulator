@@ -127,10 +127,12 @@ func (s *SimulatorImpl) stepDevices(ctx context.Context) error {
 		deltaSeconds := time.Since(device.lastUpdate).Seconds()
 		device.geolocation.Latitude += deltaSeconds * device.stepDisplacementY
 		device.geolocation.Longitude += deltaSeconds * device.stepDisplacementX
+		fmt.Printf("displacement: %f, %f\n", device.stepDisplacementX, device.stepDisplacementY)
 
 		// switch direction if we're outside the circle
 		distanceSquaredFromCenter := math.Pow(device.geolocation.Latitude-s.centerLatitude, 2) + math.Pow(device.geolocation.Longitude-s.centerLongitude, 2)
 		if distanceSquaredFromCenter > math.Pow(s.radius, 2) {
+			fmt.Printf("switching direction\n")
 			device.stepDisplacementX *= -1
 			device.stepDisplacementY *= -1
 		}
