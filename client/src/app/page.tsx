@@ -13,6 +13,7 @@ interface GeolocationMessage {
 
 interface Geolocation {
   device_id: string;
+  event_time: Date;
   latitude: number;
   longitude: number;
 }
@@ -36,6 +37,7 @@ export default function Home() {
   const [geolocations, setGeolocations] = useState<Map<string, Geolocation>>(new Map<string, Geolocation>());
   const [layerAdded, setLayerAdded] = useState<boolean>(false);
   const [mapStyleLoaded, setMapStyleLoaded] = useState<boolean>(false);
+  const [socketShouldReconnect, setSocketShouldReconnect] = useState<boolean>(true);
   const socket = useRef<WebSocket | null>(null);
 
   const mapContainer = useRef<HTMLDivElement | null>(null);
@@ -80,11 +82,11 @@ export default function Home() {
 
   // connect to websocket and listen to geolocation stream
   useEffect(() => {
-    if (socket.current) {
+    if (socket.current || !socketShouldReconnect) {
       return;
     }
+    console.log('Connecting to WebSocket...')
 
-    // TODO: handle retrying connection
     const ws = new WebSocket(geolocationStreamAPI);
     ws.addEventListener('open', () => {
       console.log('WebSocket connection established.');
@@ -97,24 +99,47 @@ export default function Home() {
     });
     ws.addEventListener('message', (event) => {
       try {
-        // TODO: validate schema
         const json: GeolocationMessage = JSON.parse(event.data);
         for (const geolocation of json.geolocations) {
+          const lastGeolocation = geolocations.get(geolocation.device_id);
+          if (!lastGeolocation) {
+            // new geolocation
+            geolocations.set(geolocation.device_id, geolocation);
+            continue;
+          }
+          if (lastGeolocation.event_time > geolocation.event_time) {
+            // stale geolocation
+            continue;
+          }
           geolocations.set(geolocation.device_id, geolocation);
         }
         setGeolocations(new Map(geolocations));
-        //console.log('Geolocations:', geolocations);
       } catch (error) {
         console.error('Error while reading WebSocket message:', error);
       }
     });
+
+    // call socket on an interval and reconnect if needed
+    const intervalId = setInterval(() => {
+      if (ws.readyState === 1) {
+        ws.send('ping');
+      } else {
+        console.log('WebSocket connection lost.');
+        ws.close();
+        socket.current = null;
+        setSocketShouldReconnect(true);
+      }
+    }, 5000);
+    setSocketShouldReconnect(false);
+
     socket.current = ws;
     return () => {
       if (ws.readyState === 1) {
+        clearInterval(intervalId);
         ws.close();
       }
     };
-  })
+  }, [socketShouldReconnect]);
 
   // add/update markers as layers on map
   useEffect(() => {
@@ -146,13 +171,13 @@ export default function Home() {
       setLayerAdded(true);
     }
 
+    // TODO: figure out what to cast this to because setData() exists
     map.current.getSource('device-locations').setData(
       {
         type: 'FeatureCollection',
         features: GeolocationsToFeatureCollection(Array.from(geolocations.values())),
       }
     );
-    //console.log('Updated map source data.');
   }, [geolocations])
 
   return (
