@@ -25,6 +25,7 @@ Simulates drones moving around a map and displays them in realtime.
 - https://github.com/timescale/timescaledb
 - https://lwebapp.com/en/post/go-websocket-simple-server
 - https://docs.mapbox.com/mapbox-gl-js/example/cluster/
+- https://github.com/gorilla/websocket/blob/main/examples/chat/client.go
 
 # Corners cut
 - Write service layer

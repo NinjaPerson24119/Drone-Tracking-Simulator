@@ -21,16 +21,6 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-func handleCloseError(err error, whenMessage string) (isClosed bool) {
-	if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-		fmt.Printf("websocket closed during %s: %s", whenMessage, err)
-		return true
-	} else {
-		fmt.Printf("error %s: %v\n", whenMessage, err)
-		return false
-	}
-}
-
 func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		ws, err := upgrader.Upgrade(c.Writer, c.Request, nil)
@@ -71,10 +61,8 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 				muWriter.Unlock()
 
 				if err != nil {
-					closed := handleCloseError(err, "pinging websocket")
-					if closed {
-						return
-					}
+					fmt.Printf("error writing ping message to websocket: %v\n", err)
+					break
 				}
 			}
 		}()
@@ -90,11 +78,8 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 			muWriter.Unlock()
 
 			if err != nil {
-				closed := handleCloseError(err, "writing geolocation to websocket")
-				if closed {
-					return err
-				}
-				return nil
+				fmt.Printf("error writing json to websocket: %v\n", err)
+				return err
 			}
 			return nil
 		})

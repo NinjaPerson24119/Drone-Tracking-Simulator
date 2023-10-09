@@ -87,13 +87,7 @@ export default function Home() {
       return;
     }
     console.log('Connecting to WebSocket...')
-
     const ws = new WebSocket(geolocationStreamAPI);
-    const sendPing = () => {
-      ws.send('ping');
-      setLastPing(new Date());
-      console.log('ping');
-    }
     
     ws.addEventListener('open', () => {
       console.log('WebSocket connection established.');
@@ -140,43 +134,20 @@ export default function Home() {
       }
     });
 
-    // call socket on an interval and reconnect if needed
-    const intervalId = setInterval(() => {
-      ws.dispatchEvent(new Event('checkPing'));
-    }, 5000);
     setSocketShouldReconnect(false);
     const resetConnection = () => {
       console.log('WebSocket connection lost.');
       ws.close();
       socket.current = null;
       setSocketShouldReconnect(true);
-      clearInterval(intervalId);
     }
-    ws.addEventListener('checkPing', () => {
-      if (ws.readyState !== 1) {
-        console.log('WebSocket not ready.');
-        return;
-      }
-      if (!lastPing) {
-        sendPing();
-        return;
-      }
-      const pingElapsed = new Date().getTime() - lastPing.getTime();
-      if (pingElapsed > 5000) {
-        console.log('Ping timeout.');
-        resetConnection();
-        return;
-      }
-    });
-
     socket.current = ws;
     return () => {
       if (ws.readyState === 1) {
-        clearInterval(intervalId);
         ws.close();
       }
     };
-  }, [socketShouldReconnect]);
+  });
 
   // add/update markers as layers on map
   useEffect(() => {
