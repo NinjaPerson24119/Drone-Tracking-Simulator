@@ -38,14 +38,14 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 			return
 		}
 		defer ws.Close()
-		mu := sync.Mutex{}
+		// it is safe to have one reader and one writer concurrently
+		muWriter := sync.Mutex{}
 
 		// ping pong
 		go func() {
 			for {
-				mu.Lock()
+				// this blocks until a message is received
 				msgType, bytes, err := ws.ReadMessage()
-				mu.Unlock()
 				if err != nil {
 					isClosed := handleCloseError(err, "reading ping from websocket")
 					if isClosed {
@@ -57,9 +57,9 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 					continue
 				}
 				if string(bytes) == "ping" {
-					mu.Lock()
+					muWriter.Lock()
 					err = ws.WriteMessage(websocket.TextMessage, []byte("pong"))
-					mu.Unlock()
+					muWriter.Unlock()
 					if err != nil {
 						isClosed := handleCloseError(err, "writing pong to websocket")
 						if isClosed {
@@ -76,9 +76,9 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 			json := GeolocationsWebSocketMessage{
 				Geolocations: []*database.DeviceGeolocation{geolocation},
 			}
-			mu.Lock()
+			muWriter.Lock()
 			err = ws.WriteJSON(json)
-			mu.Unlock()
+			muWriter.Unlock()
 			if err != nil {
 				closed := handleCloseError(err, "writing geolocation to websocket")
 				if closed {
