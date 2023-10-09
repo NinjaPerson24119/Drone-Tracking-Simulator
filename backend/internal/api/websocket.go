@@ -134,10 +134,8 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 				// get flagged geolocations as a list of IDs, then clear the flag
 				geolocationIDs := []string{}
 				muFlaggedDeviceIDs.Lock()
-				for k, v := range flaggedDeviceIDs {
-					if v {
-						geolocationIDs = append(geolocationIDs, k)
-					}
+				for k := range flaggedDeviceIDs {
+					geolocationIDs = append(geolocationIDs, k)
 				}
 				flaggedDeviceIDs = map[string]bool{}
 				muFlaggedDeviceIDs.Unlock()
