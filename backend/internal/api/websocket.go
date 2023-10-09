@@ -39,31 +39,33 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 		defer ws.Close()
 
 		// ping pong
-		go func() {
-			for {
-				msgType, bytes, err := ws.ReadMessage()
-				if err != nil {
-					isClosed := handleCloseError(err, "reading ping from websocket")
-					if isClosed {
-						return
-					}
-					continue
-				}
-				if msgType != websocket.TextMessage {
-					continue
-				}
-				if string(bytes) == "ping" {
-					err = ws.WriteMessage(websocket.TextMessage, []byte("pong"))
+		/*
+			go func() {
+				for {
+					msgType, bytes, err := ws.ReadMessage()
 					if err != nil {
-						isClosed := handleCloseError(err, "writing pong to websocket")
+						isClosed := handleCloseError(err, "reading ping from websocket")
 						if isClosed {
 							return
 						}
 						continue
 					}
+					if msgType != websocket.TextMessage {
+						continue
+					}
+					if string(bytes) == "ping" {
+						err = ws.WriteMessage(websocket.TextMessage, []byte("pong"))
+						if err != nil {
+							isClosed := handleCloseError(err, "writing pong to websocket")
+							if isClosed {
+								return
+							}
+							continue
+						}
+					}
 				}
-			}
-		}()
+			}()
+		*/
 
 		// relay geolocation inserts
 		err = repo.ListenToGeolocationInserted(c.Request.Context(), func(geolocation *database.DeviceGeolocation) error {
