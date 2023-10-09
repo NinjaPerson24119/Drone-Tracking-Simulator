@@ -121,8 +121,9 @@ func (s *SimulatorImpl) setupDevices(ctx context.Context) error {
 
 		directionRadians := 2 * math.Pi * rand.Float64()
 		s.simulatedDevices = append(s.simulatedDevices, &SimulatedDevice{
-			device:            device,
-			geolocation:       deviceGeolocation,
+			device:      device,
+			geolocation: deviceGeolocation,
+			// this isn't normalized, so it's not truly stepDistance units per second, but close enough
 			stepDisplacementY: stepDistance * math.Sin(directionRadians),
 			stepDisplacementX: stepDistance * math.Cos(directionRadians),
 		})
