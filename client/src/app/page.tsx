@@ -18,54 +18,13 @@ interface Geolocation {
   longitude: number;
 }
 
-interface GeolocationCluster {
-  avgLatitude: number;
-  avgLongitude: number;
-  geolocations: Geolocation[];
-}
-
-function GeolocationsToClusters(geolocations: Map<string, Geolocation>, clusterDistance: number): Array<GeolocationCluster> {
-  const maxDistSquared = Math.pow(clusterDistance, 2);
-  const clusters = new Array<GeolocationCluster>();
-  for (const geolocation of geolocations.values()) {
-    let nearestDistance = 0;
-    let nearestCluster: GeolocationCluster | null = null;
-    // iterate clusters to find the nearest one
-    for (const cluster of clusters) {
-      const distSquared = 
-        Math.pow(cluster.avgLatitude - geolocation.latitude, 2) +
-        Math.pow(cluster.avgLongitude - geolocation.longitude, 2)
-      if (distSquared > maxDistSquared) {
-        continue;
-      }
-      nearestDistance = distSquared;
-      nearestCluster = cluster;
-    }
-    // if nothing is within the cluster distance, create a singleton cluster
-    if (nearestCluster == null) {
-      
-      clusters.push({
-        avgLatitude: geolocation.latitude,
-        avgLongitude: geolocation.longitude,
-        geolocations: [geolocation],
-      });
-    } else {
-      // otherwise, add the geolocation to the nearest cluster
-      nearestCluster.geolocations.push(geolocation);
-      nearestCluster.avgLatitude = (nearestCluster.avgLatitude + geolocation.latitude) / 2;
-      nearestCluster.avgLongitude = (nearestCluster.avgLongitude + geolocation.longitude) / 2;
-    }
-  }
-  return clusters;
-}
-
-function GeolocationClustersToFeatureCollection(clusters: GeolocationCluster[]): Feature<Geometry, GeoJsonProperties>[] {
-  return clusters.map((cluster, idx) => {
+function GeolocationsToFeatureCollection(geolocations: Geolocation[]): Feature<Geometry, GeoJsonProperties>[] {
+  return geolocations.map((geolocation, idx) => {
     return {
       type: 'Feature',
       geometry: {
         type: 'Point',
-        coordinates: [cluster.avgLongitude, cluster.avgLatitude],
+        coordinates: [geolocation.longitude, geolocation.latitude],
       },
       properties: {
         id: `cluster-${idx}`,
@@ -76,7 +35,6 @@ function GeolocationClustersToFeatureCollection(clusters: GeolocationCluster[]):
 
 export default function Home() {
   const [geolocations, setGeolocations] = useState<Map<string, Geolocation>>(new Map<string, Geolocation>());
-  const [geolocationClusters, setGeolocationClusters] = useState<Map<string, GeolocationCluster>>(new Map<string, GeolocationCluster>());
   const [layerAdded, setLayerAdded] = useState<boolean>(false);
   const [mapStyleLoaded, setMapStyleLoaded] = useState<boolean>(false);
   const [socketShouldReconnect, setSocketShouldReconnect] = useState<boolean>(true);
@@ -228,46 +186,99 @@ export default function Home() {
       return;
     }
 
-    // TODO: linearly relate zoom to the cluster distance
-    const clusterDistance = 0.01;
-    const clusters = GeolocationsToClusters(geolocations, clusterDistance);
-
     if (!layerAdded) {
       map.current.addSource('device-locations', {
         type: 'geojson',
         data: {
           type: 'FeatureCollection',
-          features: GeolocationClustersToFeatureCollection(clusters),
+          features: GeolocationsToFeatureCollection(Array.from(geolocations.values())),
+        },
+        cluster: true,
+        clusterMaxZoom: 14,
+        clusterRadius: 20
+      });
+
+      map.current.addLayer({
+        id: 'clusters',
+        type: 'circle',
+        source: 'device-locations',
+        filter: ['has', 'point_count'],
+        paint: {
+          'circle-color': '#11b4da',
+          'circle-stroke-width': 1,
+          'circle-stroke-color': '#fff',
+          'circle-radius': [
+            'step',
+            ['get', 'point_count'],
+            20,
+            2,
+            25,
+            3,
+            30
+          ]
+
         }
       });
       map.current.addLayer({
-        id: 'device-locations-layer',
-        type: 'circle',
+        id: 'cluster-count',
+        type: 'symbol',
         source: 'device-locations',
-        paint: {
-          'circle-color': '#11b4da',
-          'circle-radius': 10,
-          'circle-stroke-width': 1,
-          'circle-stroke-color': '#fff'
-        },
+        filter: ['has', 'point_count'],
         layout: {
           'text-field': ['get', 'point_count_abbreviated'],
           'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
           'text-size': 12
-          }
+        }
+      });
+
+      map.current.addLayer({
+        id: 'unclustered-point',
+        type: 'circle',
+        source: 'device-locations',
+        filter: ['!', ['has', 'point_count']],
+        paint: {
+          'circle-color': '#11b4da',
+          'circle-radius': 4,
+          'circle-stroke-width': 1,
+          'circle-stroke-color': '#fff'
+        }
+      });
+
+      map.current.on('mouseenter', 'clusters', () => {
+        map.current!.getCanvas().style.cursor = 'pointer';
+      });
+      map.current.on('mouseleave', 'clusters', () => {
+        map.current!.getCanvas().style.cursor = '';
       });
       setLayerAdded(true);
     }
-
-    
 
     // TODO: figure out what to cast this to because setData() exists
     map.current.getSource('device-locations').setData(
       {
         type: 'FeatureCollection',
-        features: GeolocationClustersToFeatureCollection(clusters),
+        features: GeolocationsToFeatureCollection(Array.from(geolocations.values())),
       }
     );
+
+    const m = map.current;
+    m.on('click', 'clusters', (e) => {
+      const features = m.queryRenderedFeatures(e.point, {
+        layers: ['clusters']
+      });
+      const clusterId = features[0].properties!.cluster_id;
+      m.getSource('device-locations').getClusterExpansionZoom(
+        clusterId,
+        (err, zoom) => {
+          if (err) return;
+
+          m.easeTo({
+            center: features[0].geometry.coordinates,
+            zoom: zoom
+          });
+        }
+      );
+    });
   }, [geolocations])
 
   return (
