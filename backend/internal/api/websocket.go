@@ -35,6 +35,8 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 		var wsClosed atomic.Bool
 		wsClosed.Store(false)
 
+		fmt.Print("websocket connection opened\n")
+
 		// it is safe to have one reader and one writer concurrently
 		muWriter := sync.Mutex{}
 		writeWait := 3 * time.Second
@@ -201,6 +203,7 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 			fmt.Printf("error listening to geolocation inserted: %v\n", err)
 			return
 		}
+		fmt.Print("websocket connection closed\n")
 	}
 }
 
