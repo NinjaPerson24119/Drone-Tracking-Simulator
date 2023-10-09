@@ -37,6 +37,11 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 		// ping pong
 		pongWait := 10 * time.Second
 		pingPeriod := (pongWait * 9) / 10
+		if pingPeriod >= pongWait {
+			fmt.Printf("ping period is greater than pong wait: %v >= %v\n", pingPeriod, pongWait)
+			c.Status(http.StatusInternalServerError)
+			return
+		}
 		go func() {
 			ws.SetReadDeadline(time.Now().Add(pongWait))
 			ws.SetPongHandler(func(string) error {
