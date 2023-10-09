@@ -217,6 +217,7 @@ func getLatestGeolocations(ctx context.Context, repo database.Repo) ([]*database
 	geolocations := []*database.DeviceGeolocation{}
 	page := 1
 	for {
+		fmt.Printf("getting latest geolocations page %v\n", page)
 		geolocationsPage, err := repo.ListLatestGeolocations(ctx, filters.PageOptions{
 			Page:     page,
 			PageSize: 100,
@@ -231,6 +232,7 @@ func getLatestGeolocations(ctx context.Context, repo database.Repo) ([]*database
 		if len(geolocations) >= constants.SimulatedDevices {
 			break
 		}
+		page++
 	}
 	return geolocations[:constants.SimulatedDevices], nil
 }
