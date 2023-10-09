@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/NinjaPerson24119/MapProject/backend/internal/api"
 	"github.com/NinjaPerson24119/MapProject/backend/internal/database"
 	"github.com/NinjaPerson24119/MapProject/backend/internal/simulator"
 	"github.com/gin-gonic/gin"
@@ -41,7 +42,7 @@ func main() {
 	go simulator.Run(ctxWithCancel)
 
 	router := setupBaseRouter()
-	//api.RouterWithGeolocationAPI(router, repo)
+	api.RouterWithGeolocationAPI(router, repo)
 	router.Run(":8080")
 
 	os.Exit(successCode)
