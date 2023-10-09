@@ -54,8 +54,6 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 		}()
 		go func() {
 			for {
-				time.Sleep(pingPeriod)
-
 				muWriter.Lock()
 				ws.SetWriteDeadline(time.Now().Add(writeWait))
 				err := ws.WriteMessage(websocket.PingMessage, nil)
@@ -66,6 +64,7 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 					break
 				}
 				fmt.Print("ping\n")
+				time.Sleep(pingPeriod)
 			}
 		}()
 
