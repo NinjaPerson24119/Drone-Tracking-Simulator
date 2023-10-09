@@ -67,6 +67,7 @@ func (s *SimulatorImpl) Run(ctx context.Context) error {
 			if err == nil {
 				break
 			}
+			fmt.Printf("sleeping for %d secs\n", s.sleepTime.Seconds())
 			time.Sleep(s.sleepTime)
 		}
 	}
