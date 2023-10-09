@@ -29,25 +29,25 @@ type SimulatorImpl struct {
 	centerLongitude float64
 	radius          float64
 	frequency       float64
-	sleepTimeMs     time.Duration
+	sleepTime       time.Duration
 	movementPerSec  float64
 
-	maxInsertRetries  int
-	insertRetryTimeMs time.Duration
+	maxInsertRetries int
+	insertRetryTime  time.Duration
 }
 
 func New(repo database.Repo, noDevices int, centerLatitude float64, centerLongitude float64, radius float64, frequency float64, movementPerSec float64) *SimulatorImpl {
 	return &SimulatorImpl{
-		repo:              repo,
-		noDevices:         noDevices,
-		centerLatitude:    centerLatitude,
-		centerLongitude:   centerLongitude,
-		radius:            radius,
-		frequency:         frequency,
-		sleepTimeMs:       time.Duration(1.0 / frequency * float64(time.Second)),
-		movementPerSec:    movementPerSec,
-		maxInsertRetries:  5,
-		insertRetryTimeMs: time.Duration(2 * time.Millisecond),
+		repo:             repo,
+		noDevices:        noDevices,
+		centerLatitude:   centerLatitude,
+		centerLongitude:  centerLongitude,
+		radius:           radius,
+		frequency:        frequency,
+		sleepTime:        time.Duration(1.0 / frequency * float64(time.Second)),
+		movementPerSec:   movementPerSec,
+		maxInsertRetries: 5,
+		insertRetryTime:  time.Duration(2 * time.Millisecond),
 	}
 }
 
@@ -67,7 +67,7 @@ func (s *SimulatorImpl) Run(ctx context.Context) error {
 			if err == nil {
 				break
 			}
-			time.Sleep(s.sleepTimeMs)
+			time.Sleep(s.sleepTime)
 		}
 	}
 }
@@ -98,7 +98,7 @@ func (s *SimulatorImpl) setupDevices(ctx context.Context) error {
 	}
 
 	// pick random starting locations and directions
-	stepDistance := s.movementPerSec * (1.0 / float64(s.frequency))
+	stepDistance := s.movementPerSec * s.sleepTime.Seconds()
 	for _, device := range devices {
 		deviceGeolocation := &database.DeviceGeolocation{
 			DeviceID:  device.DeviceID,
@@ -151,7 +151,7 @@ func (s *SimulatorImpl) stepDevices(ctx context.Context) error {
 				fmt.Printf("Failed to insert geolocation after %d retries: %v\n", retries, err)
 				return err
 			}
-			time.Sleep(s.insertRetryTimeMs)
+			time.Sleep(s.insertRetryTime)
 		}
 		//}()
 
