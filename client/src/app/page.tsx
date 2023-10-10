@@ -47,7 +47,7 @@ export default function Home() {
   // Edmonton, Legislature
   const [latitude, setLatitude] = useState(53.5357);
   const [longitude, setLongitude] = useState(-113.5068);
-  const [zoom, setZoom] = useState(16.2);
+  const [zoom, setZoom] = useState(10);
 
   // initialize map
   useEffect(() => {
