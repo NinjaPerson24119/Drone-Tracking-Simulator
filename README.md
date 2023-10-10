@@ -6,7 +6,9 @@ Simulates ingestion of drone geolocation data and displays it on a map in realti
 
 ![demoStill](https://github.com/NinjaPerson24119/Drone-Tracking-Simulator/assets/32471098/1fddfb30-9dce-489f-ac25-95133d131ef9)
 
-[DroneTrackerDemoLowerQuality.webm](https://github.com/NinjaPerson24119/Drone-Tracking-Simulator/assets/32471098/4dcbf8f5-872c-48ad-a15b-a165e72a8141)
+
+[DroneTrackerDemoLowerQuality.webm](https://github.com/NinjaPerson24119/Drone-Tracking-Simulator/assets/32471098/13d34e03-45b7-4438-af5d-64f4bfe07786)
+
 
 ## Features
 - Displays a map with drone locations in realtime.
