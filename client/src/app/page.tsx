@@ -291,6 +291,10 @@ export default function Home() {
         <p>Latitude: {latitude}</p>
         <p>Longitude: {longitude}</p>
         <p>Zoom: {zoom}</p>
+        <br />
+        <p>This simulation shows clusters of drones flying over Edmonton.</p>
+        <br />
+        <p>Try clicking on a cluster to zoom and expand it.</p>
       </div>
       <div ref={mapContainer} className={styles.mapContainer}></div>
     </main>
