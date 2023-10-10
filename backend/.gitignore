@@ -1,2 +1,4 @@
 vendor/
 map-project-server
+cpu.pprof
+mem.pprof
