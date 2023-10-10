@@ -190,10 +190,17 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 		fmt.Print("sent complete geolocations update to websocket\n")
 
 		// listen to updates and send new geolocations as they occur
+		flaggedDeviceIDsQueue := []string{}
 		err = repo.ListenToGeolocationInserted(c.Request.Context(), func(deviceID string) error {
-			muFlaggedDeviceIDs.Lock()
-			flaggedDeviceIDs[deviceID] = true
-			muFlaggedDeviceIDs.Unlock()
+			flaggedDeviceIDsQueue = append(flaggedDeviceIDsQueue, deviceID)
+			locked := muFlaggedDeviceIDs.TryLock()
+			if locked {
+				for _, deviceID := range flaggedDeviceIDsQueue {
+					flaggedDeviceIDs[deviceID] = true
+				}
+				flaggedDeviceIDsQueue = []string{}
+				muFlaggedDeviceIDs.Unlock()
+			}
 
 			if wsClosed.Load() {
 				return fmt.Errorf("websocket closed while handling geolocation inserted")
