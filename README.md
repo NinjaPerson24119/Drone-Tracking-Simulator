@@ -35,6 +35,16 @@ The simulator is a goroutine that inserts geolocation data on a periodic basis. 
 
 On the frontend, the map is rendered using Mapbox GL JS. The map is initialized with a cluster layer that groups drones together when they are within a certain distance of each other. Clicking on a cluster will zoom in until the cluster is expanded. This feature is mostly [reference code from this example](https://docs.mapbox.com/mapbox-gl-js/example/cluster/), as it's supported nearly out of the box.
 
+## Results
+
+The current software can run at ~10FPS with 15 drones before the simulator exceeds its allocated time budget per step.
+As the number of drones increases, DB latency becomes an issue, and the drone movement begins to get choppy and resemble... teleportation.
+
+The DB latency seems to scale OK beyond this point, but the simulator's time budget is still exceeded, so it doesn't matter.
+If I could reduce this latency slightly, it might scale quite a bit better, and I could probably get >100 drones.
+
+If I took a write-after-relay strategy as described in the major pitfall section, I think I could scale to arbitrarily many drones, since the server becomes a relay, and the bottleneck moves from the DB to the network connection from device to server to client.
+
 ## Major Pitfall
 
 Firstly, I assumed that the desired result was not true "real-time". Without a physical connection, network conditions are highly variable.
