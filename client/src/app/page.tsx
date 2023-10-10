@@ -1,9 +1,9 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react';
-import styles from './page.module.css'
-import mapboxgl from 'mapbox-gl';
+import styles from './page.module.css';
 import { Feature, Geometry, GeoJsonProperties } from 'geojson';
+import mapboxgl, { GeoJSONSource } from 'mapbox-gl';
 
 const geolocationStreamAPI = process.env.NEXT_PUBLIC_WEBSOCKET || '';
 
@@ -254,7 +254,7 @@ export default function Home() {
     }
 
     // TODO: figure out what to cast this to because setData() exists
-    map.current.getSource('device-locations').setData(
+    (map.current.getSource('device-locations') as GeoJSONSource).setData(
       {
         type: 'FeatureCollection',
         features: GeolocationsToFeatureCollection(Array.from(geolocations.values())),
@@ -267,15 +267,17 @@ export default function Home() {
         layers: ['clusters']
       });
       const clusterId = features[0].properties!.cluster_id;
-      m.getSource('device-locations').getClusterExpansionZoom(
+      (m.getSource('device-locations') as mapboxgl.GeoJSONSource).getClusterExpansionZoom(
         clusterId,
         (err, zoom) => {
           if (err) return;
 
-          m.easeTo({
-            center: features[0].geometry.coordinates,
-            zoom: zoom
-          });
+          if (features[0].geometry.type === 'Point') {
+            m.easeTo({
+              center: [features[0].geometry.coordinates[0], features[0].geometry.coordinates[1]],
+              zoom: zoom
+            });
+          }
         }
       );
     });
