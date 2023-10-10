@@ -1,5 +1,5 @@
 package constants
 
 const (
-	SimulatedDevices int = 100
+	SimulatedDevices int = 50
 )
