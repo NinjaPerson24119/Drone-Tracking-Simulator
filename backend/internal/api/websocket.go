@@ -105,7 +105,6 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 		checkPeriod := time.Millisecond * 10
 		go func() {
 			for {
-				//fmt.Print("checking for flagged geolocations\n")
 				if wsClosed.Load() {
 					fmt.Print("websocket closed while processing flagged geolocations")
 					return
@@ -116,7 +115,6 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 				flaggedDeviceIDsLength := len(flaggedDeviceIDs)
 				muFlaggedDeviceIDs.Unlock()
 				if (flaggedDeviceIDsLength < bufferSize && time.Since(timeAtLastSend) < bufferPeriod) || flaggedDeviceIDsLength == 0 {
-					//fmt.Printf("not enough flagged geolocations: %v < %v, and not enough time elapsed: %v < %v\n", flaggedDeviceIDsLength, bufferSize, time.Since(timeAtLastSend), bufferPeriod)
 					continue
 				}
 
@@ -196,7 +194,6 @@ func geolocationsWebSocketGenerator(repo database.Repo) func(c *gin.Context) {
 			muFlaggedDeviceIDs.Lock()
 			flaggedDeviceIDs[deviceID] = true
 			muFlaggedDeviceIDs.Unlock()
-			//fmt.Printf("flagged geolocation inserted: %v\n", deviceID)
 
 			if wsClosed.Load() {
 				return fmt.Errorf("websocket closed while handling geolocation inserted")
