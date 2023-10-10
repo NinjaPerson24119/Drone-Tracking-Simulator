@@ -1,10 +1,10 @@
-# Drone Tracker
+# Drone Tracking Simulator
 
 Simulates ingestion of drone geolocation data and displays it on a map in realtime.
 
 [Check it out here!](https://map-project-r2zv.onrender.com)
 
-TODO: screenshot
+[DroneTrackerDemoLowerQuality.webm](https://github.com/NinjaPerson24119/Drone-Tracking-Simulator/assets/32471098/4dcbf8f5-872c-48ad-a15b-a165e72a8141)
 
 ## Features
 - Displays a map with drone locations in realtime.
