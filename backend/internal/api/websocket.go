@@ -230,6 +230,9 @@ func getLatestGeolocations(ctx context.Context, repo database.Repo) ([]*database
 		}
 		page++
 	}
-	upperBound := min(len(geolocations), constants.SimulatedDevices)
+	upperBound := constants.SimulatedDevices
+	if upperBound > len(geolocations) {
+		upperBound = len(geolocations)
+	}
 	return geolocations[:upperBound], nil
 }
