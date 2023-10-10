@@ -4,7 +4,7 @@ Simulates ingestion of drone geolocation data and displays it on a map in realti
 
 [The project is live here!](https://map-project-r2zv.onrender.com)
 
-[Demo Picture](demoStillSmall.png)
+![demoStill](https://github.com/NinjaPerson24119/Drone-Tracking-Simulator/assets/32471098/1fddfb30-9dce-489f-ac25-95133d131ef9)
 
 [DroneTrackerDemoLowerQuality.webm](https://github.com/NinjaPerson24119/Drone-Tracking-Simulator/assets/32471098/4dcbf8f5-872c-48ad-a15b-a165e72a8141)
 
