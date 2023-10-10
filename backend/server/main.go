@@ -5,16 +5,12 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/NinjaPerson24119/MapProject/backend/internal/api"
 	"github.com/NinjaPerson24119/MapProject/backend/internal/constants"
 	"github.com/NinjaPerson24119/MapProject/backend/internal/database"
 	"github.com/NinjaPerson24119/MapProject/backend/internal/simulator"
 	"github.com/gin-gonic/gin"
-
-	"runtime/pprof"
 )
 
 func setupBaseRouter() *gin.Engine {
@@ -29,31 +25,6 @@ func setupBaseRouter() *gin.Engine {
 
 func main() {
 	ctx := context.Background()
-
-	// profiler
-	cpuProfileFile, err := os.Create("cpu.pprof")
-	if err != nil {
-		os.Exit(-1)
-	}
-	defer cpuProfileFile.Close()
-	pprof.StartCPUProfile(cpuProfileFile)
-	defer pprof.StopCPUProfile()
-	memProfileFile, err := os.Create("mem.pprof")
-	if err != nil {
-		os.Exit(-1)
-	}
-	defer memProfileFile.Close()
-
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		sig := <-sigChan
-		fmt.Printf("Received signal: %v\n", sig)
-		pprof.StopCPUProfile()
-		cpuProfileFile.Close()
-		memProfileFile.Close()
-		os.Exit(0)
-	}()
 
 	connectionURL := os.Getenv("POSTGRES_CONNECTION_URL")
 	repo, err := database.New(ctx, connectionURL)
