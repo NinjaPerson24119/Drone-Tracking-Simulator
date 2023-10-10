@@ -1,0 +1,308 @@
+{
+    "_type": "export",
+    "__export_format": 4,
+    "__export_date": "2023-10-10T01:40:38.164Z",
+    "__export_source": "insomnia.desktop.app:v2023.5.8",
+    "resources": [
+        {
+            "_id": "ws-req_3092b0a410c84705af7c7395ba209dca",
+            "parentId": "wrk_68e79ec0780c4d58bc210d49e43a759d",
+            "modified": 1696881934893,
+            "created": 1696722718435,
+            "name": "Stream Geolocations",
+            "url": "{{ _.websocket_base_path }}/geolocation/stream",
+            "metaSortKey": -1696722718435,
+            "headers": [
+                {
+                    "name": "User-Agent",
+                    "value": "insomnia/2023.5.8"
+                }
+            ],
+            "authentication": {},
+            "parameters": [],
+            "settingEncodeUrl": true,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingFollowRedirects": "global",
+            "description": "",
+            "_type": "websocket_request"
+        },
+        {
+            "_id": "wrk_68e79ec0780c4d58bc210d49e43a759d",
+            "parentId": null,
+            "modified": 1696653633313,
+            "created": 1696653633313,
+            "name": "MapProject",
+            "description": "",
+            "scope": "collection",
+            "_type": "workspace"
+        },
+        {
+            "_id": "req_11b44c7092d045b8b41a6871b6e04c4e",
+            "parentId": "wrk_68e79ec0780c4d58bc210d49e43a759d",
+            "modified": 1696722704595,
+            "created": 1696656558017,
+            "url": "{{ _.base_path }}/device/create",
+            "name": "Add Device",
+            "description": "",
+            "method": "POST",
+            "body": {
+                "mimeType": "application/json",
+                "text": "{\n\t\"name\": \"SuperBigTruck\"\n}"
+            },
+            "parameters": [],
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                },
+                {
+                    "name": "User-Agent",
+                    "value": "insomnia/2023.5.8"
+                }
+            ],
+            "authentication": {},
+            "metaSortKey": -1696656558017,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "req_a00aabe0b56c4dd6aca84571d92ff50d",
+            "parentId": "wrk_68e79ec0780c4d58bc210d49e43a759d",
+            "modified": 1696881738499,
+            "created": 1696715308199,
+            "url": "{{ _.base_path }}/device/list",
+            "name": "List Devices",
+            "description": "",
+            "method": "POST",
+            "body": {
+                "mimeType": "application/json",
+                "text": "{\n\t\"paging\": {\n\t\t\"page\": 1,\n\t\t\"page_size\": 100\n\t}\n}"
+            },
+            "parameters": [],
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                },
+                {
+                    "name": "User-Agent",
+                    "value": "insomnia/2023.5.8"
+                }
+            ],
+            "authentication": {},
+            "metaSortKey": -1696656462156.25,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "req_f477aa066cd744e2a737ebc9f4a2cd38",
+            "parentId": "wrk_68e79ec0780c4d58bc210d49e43a759d",
+            "modified": 1696729034113,
+            "created": 1696656608785,
+            "url": "{{ _.base_path }}/geolocation/create",
+            "name": "Add Geolocation",
+            "description": "",
+            "method": "POST",
+            "body": {
+                "mimeType": "application/json",
+                "text": "{\n\t\"device_id\": \"9275798a-0316-4a18-b8ea-a8baaf635966\",\n\t\"event_time\": \"2022-08-30T15:17:00-06:00\",\n\t\"latitude\": 55.5357,\n\t\"longitude\": -113.5068\n}"
+            },
+            "parameters": [],
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                },
+                {
+                    "name": "User-Agent",
+                    "value": "insomnia/2023.5.8"
+                }
+            ],
+            "authentication": {},
+            "metaSortKey": -1696656366295.5,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "req_6adf3ca126554f89a740000b3a795c06",
+            "parentId": "wrk_68e79ec0780c4d58bc210d49e43a759d",
+            "modified": 1696873830248,
+            "created": 1696726443986,
+            "url": "{{ _.base_path }}/geolocation/getMulti",
+            "name": "GetMulti Latest Geolocation",
+            "description": "",
+            "method": "POST",
+            "body": {
+                "mimeType": "application/json",
+                "text": "{\n\t\"device_ids\": [\n\t\t\"ff6fb033-dc3e-494b-ac1b-fe70cf7f0e15\",\n\t\t\"ff6fb033-dc4e-494b-ac1b-fe70cf7f0e15\",\n\t\t\"0658b4d8-9f5a-485d-8b1a-dea5180da89f\"\n\t]\n}"
+            },
+            "parameters": [],
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                },
+                {
+                    "name": "User-Agent",
+                    "value": "insomnia/2023.5.8"
+                }
+            ],
+            "authentication": {},
+            "metaSortKey": -1696656270434.75,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "req_8d1e9a6f32984d27ab6e1bfd1b819265",
+            "parentId": "wrk_68e79ec0780c4d58bc210d49e43a759d",
+            "modified": 1696873412284,
+            "created": 1696656174574,
+            "url": "{{ _.base_path }}/geolocation/list",
+            "name": "List Lastest Geolocations",
+            "description": "",
+            "method": "POST",
+            "body": {
+                "mimeType": "application/json",
+                "text": "{\n\t\"paging\": {\n\t\t\"page\": 1,\n\t\t\"page_size\": 100\n\t}\n}"
+            },
+            "parameters": [],
+            "headers": [
+                {
+                    "name": "Content-Type",
+                    "value": "application/json"
+                },
+                {
+                    "name": "User-Agent",
+                    "value": "insomnia/2023.5.8"
+                }
+            ],
+            "authentication": {},
+            "metaSortKey": -1696656174574,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "req_d006540307e24716983aea2bbd75ce58",
+            "parentId": "wrk_68e79ec0780c4d58bc210d49e43a759d",
+            "modified": 1696656283633,
+            "created": 1696653644096,
+            "url": "{{ _.base_path }}/ping",
+            "name": "Ping",
+            "description": "",
+            "method": "GET",
+            "body": {},
+            "parameters": [],
+            "headers": [
+                {
+                    "name": "User-Agent",
+                    "value": "insomnia/2023.5.8"
+                }
+            ],
+            "authentication": {},
+            "metaSortKey": -1696653644096,
+            "isPrivate": false,
+            "settingStoreCookies": true,
+            "settingSendCookies": true,
+            "settingDisableRenderRequestBody": false,
+            "settingEncodeUrl": true,
+            "settingRebuildPath": true,
+            "settingFollowRedirects": "global",
+            "_type": "request"
+        },
+        {
+            "_id": "env_f95936568b047b6c3e51bf5df21a6c20594963a8",
+            "parentId": "wrk_68e79ec0780c4d58bc210d49e43a759d",
+            "modified": 1696881808928,
+            "created": 1696653633316,
+            "name": "Base Environment",
+            "data": {},
+            "dataPropertyOrder": {},
+            "color": null,
+            "isPrivate": false,
+            "metaSortKey": 1696653633316,
+            "_type": "environment"
+        },
+        {
+            "_id": "jar_f95936568b047b6c3e51bf5df21a6c20594963a8",
+            "parentId": "wrk_68e79ec0780c4d58bc210d49e43a759d",
+            "modified": 1696653633317,
+            "created": 1696653633317,
+            "name": "Default Jar",
+            "cookies": [],
+            "_type": "cookie_jar"
+        },
+        {
+            "_id": "env_1e7f6983a9ed4667bedc3ed2dbb0b597",
+            "parentId": "env_f95936568b047b6c3e51bf5df21a6c20594963a8",
+            "modified": 1696881912314,
+            "created": 1696881748298,
+            "name": "Local",
+            "data": {
+                "base_path": "http://localhost:8080",
+                "websocket_base_path": "ws://localhost:8080"
+            },
+            "dataPropertyOrder": {
+                "&": [
+                    "base_path",
+                    "websocket_base_path"
+                ]
+            },
+            "color": null,
+            "isPrivate": false,
+            "metaSortKey": 1696881748298,
+            "_type": "environment"
+        },
+        {
+            "_id": "env_f6f614cff1444135b137ee22bca40695",
+            "parentId": "env_f95936568b047b6c3e51bf5df21a6c20594963a8",
+            "modified": 1696881924497,
+            "created": 1696881763167,
+            "name": "Prod",
+            "data": {
+                "base_path": "https://map-project-backend.onrender.com",
+                "websocket_base_path": "wss://map-project-backend.onrender.com"
+            },
+            "dataPropertyOrder": {
+                "&": [
+                    "base_path",
+                    "websocket_base_path"
+                ]
+            },
+            "color": null,
+            "isPrivate": false,
+            "metaSortKey": 1696881763167,
+            "_type": "environment"
+        }
+    ]
+}
