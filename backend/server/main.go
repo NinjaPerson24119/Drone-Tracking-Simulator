@@ -37,7 +37,7 @@ func main() {
 	// Edmonton legislature
 	latitude := 53.5357
 	longitude := -113.5068
-	simulator := simulator.New(repo, constants.SimulatedDevices, latitude, longitude, 0.25, 5, 0.025/2)
+	simulator := simulator.New(repo, constants.SimulatedDevices, latitude, longitude, 0.25/3, 10, 0.025/4)
 	ctxWithCancel, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go simulator.Run(ctxWithCancel)

@@ -116,7 +116,7 @@ export default function Home() {
           }
           return value;
         });
-        console.log('Received geolocations');
+        console.log('Received geolocations', json.geolocations.length);
         for (const geolocation of json.geolocations) {
           const lastGeolocation = geolocations.get(geolocation.device_id);
           if (!lastGeolocation) {
@@ -295,6 +295,8 @@ export default function Home() {
         <p>This simulation shows clusters of drones flying over Edmonton.</p>
         <br />
         <p>Try clicking on a cluster to zoom and expand it.</p>
+        <br />
+        <p>Rendering {geolocations.size} drones.</p>
       </div>
       <div ref={mapContainer} className={styles.mapContainer}></div>
     </main>
