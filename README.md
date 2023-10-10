@@ -1,13 +1,18 @@
 # Drone Tracker
 
+Simulates ingestion of drone geolocation data and displays it on a map in realtime.
+
+[Check it out here!](https://map-project-r2zv.onrender.com)
+
+TODO: screenshot
+
+![Sequence Diagram](sequenceDiagram.png)
+
+## Features
 - Displays a map with drone locations in realtime.
 - Drone locations are simulated by a backend service that moves them on a linear path defined by a starting point, radius to turn around at, and an angle.
 - Zooming out the map will group drones together if they are within a certain distance of each other.
 - Clicking on a drone will zoom in until the group is expanded
-
-[Check it out here!](https://map-project-r2zv.onrender.com)
-TODO: screenshot
-TODO: sequence diagram
 
 ## Design
 - Assets within L2 distance get grouped (relative to zoom level)
@@ -59,6 +64,9 @@ TODO: sequence diagram
     - When sharding the DB across multiple regions, this would likely be necessary since `pg_notify` is local to one DB and would need to be relayed, introducing additional latency
 - Device <-> Server
   - The geolocation ingestion should pass through a service layer with a queue, or else we could accidentally DDoS ourselves with too many concurrent requests
+
+# Illusions Possible
+- Realtime updates over a network of unknown quality is really hard. We could smooth movement by allowing the frontend to guess where it thinks the device is going to be, and then correct it when the next update comes in.
 
 # Deployment Considerations
 

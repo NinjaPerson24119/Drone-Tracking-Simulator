@@ -1,0 +1,11 @@
+@startuml
+
+Simulator -> Simulator: Initialize drones as points moving back and forth on line
+Simulator -> Simulator: Step drone geolocations
+Simulator -> PostgreSQL: Batch insert Geolocations
+PostgreSQL -> WebSocket: pg_notify geolocation added
+WebSocket -> Client: Sends full geolocation state for every device on connect
+WebSocket -> WebSocket: Wait until buffer full or timeout
+WebSocket -> Client: Sends payload
+
+@enduml
