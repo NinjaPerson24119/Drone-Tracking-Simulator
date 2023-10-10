@@ -67,9 +67,9 @@ I decided to use Google Cloud SQL instead, and it's a lot easier and cheaper to 
 It's deployed in the same region as the Render.com instances, so the latency is pretty low.
 
 Because GCP throttles IO operations relative to the disk size of the instance, I had to batch all my simulator inserts into a single transaction.
-This probably wouldn't happen if there were multiple physical devices, unless a central queue was used, but the insertion pattern would be a bit unpredictable. I think this would be a larger issue at scale.
+This would likely happen if there were multiple physical devices, unless a central queue was used, but the insertion pattern would be a bit unpredictable. I think this would be a larger issue at scale.
 
-Unfortunately, GCP doesn't support TimescaleDB on a managed instance, so I didn't try it out. I think it would've been useful if I spent some time spinning up a VM instead.
+Unfortunately, GCP doesn't support TimescaleDB on a managed instance, so I didn't try it out. I think it would've been useful if I spent some time spinning up a VM instead. Maybe it would even fix my query latency issues.
 
 ## Optimizations / Scaling considerations
 - Simulator is decoupled from the websocket server to allow for testing INSERT load
